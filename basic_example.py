@@ -151,7 +151,7 @@ if __name__ == "__main__":
     y = data
     D_latent = 2  # Latent dimension
     D_obs = data.shape[1]  # Data dimension
-    K = 20  # Number of components
+    K = 5  # Number of components
 
     # Fit SLDS
     rslds = SLDS(
@@ -182,10 +182,20 @@ if __name__ == "__main__":
     # original
     plt.figure(figsize=(6, 6))
     ax1 = plt.subplot(131)
+    #position
     plot_original(data, ax=ax1)
+    # vel
+    plt.figure(figsize=(6, 6))
+    ax2 = plt.subplot(131)
+    plot_original(data[:, 2:], ax=ax2)
+    # acc
+    plt.figure(figsize=(6, 6))
+    ax3 = plt.subplot(131)
+    plot_original(data[:, 2:], ax=ax3)
+
 
     plt.figure(figsize=(6, 6))
-    ax1 = plt.subplot(131)
+    ax4 = plt.subplot(131)
     plot_trajectory(zhat, xhat, ax=ax1)
     plt.title("Inferred, Laplace-EM")
 
