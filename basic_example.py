@@ -1,7 +1,9 @@
+from typing import List
 import gym
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
+from tqdm import tqdm
 
 color_names = ["windows blue", "red", "amber", "faded green"]
 colors = sns.xkcd_palette(color_names)
@@ -28,6 +30,21 @@ def plot_trajectory(z, x, ax=None, ls="-"):
 
     return ax
 
+
+def plot_original(x, ax=None, ls="-"):
+    if ax is None:
+        fig = plt.figure(figsize=(4, 4))
+        ax = fig.gca()
+    ax.plot(
+        x[:, 0],
+        x[:, 1],
+        lw=1,
+        ls=ls,
+        # color=colors[z[start] % len(colors)],
+        alpha=1.0,
+    )
+
+    return ax
 
 def plot_most_likely_dynamics(
     model,
@@ -86,34 +103,55 @@ def add_derivatives(data):
     return np.hstack((data[: a.shape[0], :], v[: a.shape[0], :], a))
 
 
+def policy(env, obs, t, horizon=200):
+    a = 2
+    if obs[-1, -3] < 0:
+        a = 0
+    # if obs[-1, 3] > 1:
+    #     a = 2
+    # elif obs[-1, 3] < -1:
+    #     a = 0
+    return a
+
+
+def data_to_array(data: List, actions: List):
+    # convert to arrays and add derivatives
+    data = np.stack(data)
+    actions = np.stack(actions)[:, np.newaxis]
+    data = add_derivatives(data)
+    data = np.hstack((data, actions[:data.shape[0]]))
+    return data
+
 if __name__ == "__main__":
-    env = gym.make("MountainCar-v0", render_mode="human")
+    env = gym.make("MountainCar-v0")
     env.action_space.seed(42)
+    STEPS = 10000
 
     data = []
+    actions = []
     observation, info = env.reset(seed=42)
 
     action = 0
-    for i in range(200):
-        data.append(observation)
-
-        if i > 100:
-            action = 2
+    for i in tqdm(range(STEPS)):
 
         observation, reward, terminated, truncated, info = env.step(action)
-
         if terminated or truncated:
             observation, info = env.reset()
+        
+        data.append(observation)
+        actions.append(action)
+        if i > 5:
+            obs = data_to_array(data, actions)
+            action = policy(env, obs, t=i)
 
     env.close()
 
-    data = np.stack(data)
-    data = add_derivatives(data)
 
+    data = obs
     y = data
     D_latent = 2  # Latent dimension
     D_obs = data.shape[1]  # Data dimension
-    K = 2  # Number of components
+    K = 20  # Number of components
 
     # Fit SLDS
     rslds = SLDS(
@@ -132,7 +170,7 @@ if __name__ == "__main__":
         method="laplace_em",
         variational_posterior="structured_meanfield",
         initialize=False,
-        num_iters=500,
+        num_iters=100,
         alpha=0.0,
     )
     xhat = q.mean_continuous_states[0]
@@ -141,6 +179,11 @@ if __name__ == "__main__":
 
 
     # Plots
+    # original
+    plt.figure(figsize=(6, 6))
+    ax1 = plt.subplot(131)
+    plot_original(data, ax=ax1)
+
     plt.figure(figsize=(6, 6))
     ax1 = plt.subplot(131)
     plot_trajectory(zhat, xhat, ax=ax1)
