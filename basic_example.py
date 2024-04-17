@@ -97,6 +97,22 @@ def plot_most_likely_dynamics(
     return ax
 
 
+def plot_phases(Ws, rs, ax=None):
+    if ax is None:
+        fig = plt.figure(figsize=(6,6))
+        ax = fig.add_subplot(111)
+
+    min_ = min(rs)
+    max_ = max(rs)
+    x = np.linspace(min_, max_, 100)
+    for i in range(len(Ws)):
+        y = rs[i] - Ws[i][0]/Ws[i][1] * x
+        ax.plot(
+            x,
+            y
+        )
+
+
 def add_derivatives(data):
     v = np.diff(data, axis=0)
     a = np.diff(data, axis=0, n=2)
@@ -125,7 +141,8 @@ def data_to_array(data: List, actions: List):
 if __name__ == "__main__":
     env = gym.make("MountainCar-v0")
     env.action_space.seed(42)
-    STEPS = 10000
+    STEPS = 1000
+    ITERS = 1000
 
     data = []
     actions = []
@@ -170,40 +187,55 @@ if __name__ == "__main__":
         method="laplace_em",
         variational_posterior="structured_meanfield",
         initialize=False,
-        num_iters=100,
+        num_iters=ITERS,
         alpha=0.0,
     )
     xhat = q.mean_continuous_states[0]
     zhat = rslds.most_likely_states(xhat, y)
 
+    Ws, Rs, rs = rslds.transitions.params
+    for i in range(len(Ws)):
+        print("w", Rs[i])
+        print("b", rs[i])
+
+    
+    # def get_region()
 
 
-    # Plots
-    # original
-    plt.figure(figsize=(6, 6))
-    ax1 = plt.subplot(131)
-    #position
-    plot_original(data, ax=ax1)
-    # vel
-    plt.figure(figsize=(6, 6))
-    ax2 = plt.subplot(131)
-    plot_original(data[:, 2:], ax=ax2)
-    # acc
-    plt.figure(figsize=(6, 6))
-    ax3 = plt.subplot(131)
-    plot_original(data[:, 2:], ax=ax3)
-
-
-    plt.figure(figsize=(6, 6))
-    ax4 = plt.subplot(131)
-    plot_trajectory(zhat, xhat, ax=ax1)
-    plt.title("Inferred, Laplace-EM")
-
-    plt.figure(figsize=(6, 6))
-    ax = plt.subplot(111)
-    lim = abs(xhat).max(axis=0) + 1
-    plot_most_likely_dynamics(
-        rslds, xlim=(-lim[0], lim[0]), ylim=(-lim[1], lim[1]), ax=ax
-    )
-    plt.title("Most Likely Dynamics, Laplace-EM")
+    
+    # plt.figure(figsize=(6, 6))
+    # ax1 = plt.subplot(131)
+    plot_phases(Rs, rs)
     plt.show()
+
+
+
+    # # Plots
+    # # original
+    # plt.figure(figsize=(6, 6))
+    # ax1 = plt.subplot(131)
+    # #position
+    # plot_original(data, ax=ax1)
+    # # vel
+    # plt.figure(figsize=(6, 6))
+    # ax2 = plt.subplot(131)
+    # plot_original(data[:, 2:], ax=ax2)
+    # # acc
+    # plt.figure(figsize=(6, 6))
+    # ax3 = plt.subplot(131)
+    # plot_original(data[:, 2:], ax=ax3)
+
+
+    # plt.figure(figsize=(6, 6))
+    # ax4 = plt.subplot(131)
+    # plot_trajectory(zhat, xhat, ax=ax1)
+    # plt.title("Inferred, Laplace-EM")
+
+    # plt.figure(figsize=(6, 6))
+    # ax = plt.subplot(111)
+    # lim = abs(xhat).max(axis=0) + 1
+    # plot_most_likely_dynamics(
+    #     rslds, xlim=(-lim[0], lim[0]), ylim=(-lim[1], lim[1]), ax=ax
+    # )
+    # plt.title("Most Likely Dynamics, Laplace-EM")
+    # plt.show()
