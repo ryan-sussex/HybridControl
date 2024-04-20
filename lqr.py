@@ -26,6 +26,7 @@ class LinearController:
         self.v = v
         # Precomputed
         self.S_ih = None
+        self.Ks = None
 
     @staticmethod
     def get_basis_vecs(c):
@@ -48,20 +49,37 @@ class LinearController:
             S = solve_discrete_are(self.A, self.B, self.Q, self.R)
             self.S_ih = S
 
-        K = (
-            np.linalg.inv(self.R + self.B.T @ self.S_ih @ self.B)
-            @ self.B.T
-            @ self.S_ih
-            @ self.A
-        )
+        K = calculate_gain(self.A, self.B, self.Q, self.R, self.S_ih)
 
         if x_ref is None:
             x_ref = np.array([0, 0])
-
         return -K @ (x - x_ref)
 
-    def finite_horizon(self, x, T):
-        pass
+    def finite_horizon(self, x, t, T, x_ref=None):
+        if self.Ks is not None:
+            if t >= T:
+                t = T - 1
+            return -self.Ks[t] @ x
+
+        Ss = [None for _ in range(T)]
+        Ss[T - 1] = np.zeros(self.A.shape)
+        for i in range(T):
+            Ss[T - i - 2] = backwards_riccati(
+                self.A, self.B, self.Q, self.R, Ss[T - i - 1]
+            )
+
+        self.Ks = [calculate_gain(self.A, self.B, self.Q, self.R, S) for S in Ss]
+        return self.finite_horizon(x, t, T)
+
+
+def calculate_gain(A, B, Q, R, S):
+    return np.linalg.inv(R + B.T @ S @ B) @ B.T @ S @ A
+
+
+def backwards_riccati(A, B, Q, R, S):
+    return (
+        Q + A.T @ S @ A - (A.T @ S @ B) @ np.linalg.pinv(R + B.T @ S @ B) @ B.T @ S @ A
+    )
 
 
 def project(u, v):
@@ -73,29 +91,49 @@ if __name__ == "__main__":
     A = np.array([[0, 1], [0, 1]])
     B = np.array([[1, 0], [1, 1]])
 
-    Q = np.eye(2) * 20
+    Q = np.eye(2) * 100
 
     lc = LinearController(A, B, Q, Q)
 
     x_0 = np.array([0, 6])
     print(lc.infinite_horizon(x_0))
 
-    x_ref = np.array([-3, 4])
-
+    x_ref = None
+    # x_ref = np.array([-3, 4])
+    # plt.figure(figsize=(6, 6))
     x = x_0
     traj = [x]
-    for _ in range(10):
+    for _ in range(100):
         u = lc.infinite_horizon(x, x_ref=x_ref)
-        x = A @ x + B @ u
-        # + np.random.normal([0,0], scale=0.2)
+        x = A @ x + B @ u + np.random.normal([0, 0], scale=0.2)
         traj.append(x)
     X = np.column_stack(traj)
 
+
+    ax1 = plt.subplot(111)
     for i in range(X.shape[1]):
-        plt.plot(
+        ax1.plot(
             X[0, i],
             X[1, i],
-            color=(0.1, 0.2, i / X.shape[1]),
+            color=(0.5, 0.2, i / X.shape[1]),
+            marker="x",
+            linestyle="none",
+        )
+
+    x = x_0
+    traj = [x]
+    for t in range(100):
+        u = lc.finite_horizon(x, t=t, T=1, x_ref=x_ref)
+        x = A @ x + B @ u + np.random.normal([0, 0], scale=0.2)
+        traj.append(x)
+    X = np.column_stack(traj)
+
+    # ax2 = plt.subplot(111)
+    for i in range(X.shape[1]):
+        ax1.plot(
+            X[0, i],
+            X[1, i],
+            color=(0.3, 0.7, i / X.shape[1]),
             marker="o",
             linestyle="none",
         )
