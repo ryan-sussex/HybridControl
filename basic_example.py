@@ -120,6 +120,9 @@ def add_derivatives(data):
 
 
 def policy(env, obs, t, horizon=200):
+    i = np.random.randint(0, 10)
+    if i > 6:
+        return np.random.randint(0, 2)
     a = 2
     if obs[-1, -3] < 0:
         a = 0
@@ -139,10 +142,10 @@ def data_to_array(data: List, actions: List):
     return data
 
 if __name__ == "__main__":
-    env = gym.make("MountainCar-v0")
+    env = gym.make("MountainCar-v0", render_mode="human")
     env.action_space.seed(42)
     STEPS = 1000
-    ITERS = 1000
+    ITERS = 100
 
     data = []
     actions = []
@@ -168,7 +171,7 @@ if __name__ == "__main__":
     y = data
     D_latent = 2  # Latent dimension
     D_obs = data.shape[1]  # Data dimension
-    K = 5  # Number of components
+    K = 3  # Number of components
 
     # Fit SLDS
     rslds = SLDS(
@@ -210,32 +213,32 @@ if __name__ == "__main__":
 
 
 
-    # # Plots
-    # # original
-    # plt.figure(figsize=(6, 6))
-    # ax1 = plt.subplot(131)
-    # #position
-    # plot_original(data, ax=ax1)
-    # # vel
-    # plt.figure(figsize=(6, 6))
-    # ax2 = plt.subplot(131)
-    # plot_original(data[:, 2:], ax=ax2)
-    # # acc
-    # plt.figure(figsize=(6, 6))
-    # ax3 = plt.subplot(131)
-    # plot_original(data[:, 2:], ax=ax3)
+    # Plots
+    # original
+    plt.figure(figsize=(6, 6))
+    ax1 = plt.subplot(131)
+    #position
+    plot_original(data, ax=ax1)
+    # vel
+    plt.figure(figsize=(6, 6))
+    ax2 = plt.subplot(131)
+    plot_original(data[:, 2:], ax=ax2)
+    # acc
+    plt.figure(figsize=(6, 6))
+    ax3 = plt.subplot(131)
+    plot_original(data[:, 2:], ax=ax3)
 
 
-    # plt.figure(figsize=(6, 6))
-    # ax4 = plt.subplot(131)
-    # plot_trajectory(zhat, xhat, ax=ax1)
-    # plt.title("Inferred, Laplace-EM")
+    plt.figure(figsize=(6, 6))
+    ax4 = plt.subplot(131)
+    plot_trajectory(zhat, xhat, ax=ax1)
+    plt.title("Inferred, Laplace-EM")
 
-    # plt.figure(figsize=(6, 6))
-    # ax = plt.subplot(111)
-    # lim = abs(xhat).max(axis=0) + 1
-    # plot_most_likely_dynamics(
-    #     rslds, xlim=(-lim[0], lim[0]), ylim=(-lim[1], lim[1]), ax=ax
-    # )
-    # plt.title("Most Likely Dynamics, Laplace-EM")
-    # plt.show()
+    plt.figure(figsize=(6, 6))
+    ax = plt.subplot(111)
+    lim = abs(xhat).max(axis=0) + 1
+    plot_most_likely_dynamics(
+        rslds, xlim=(-lim[0], lim[0]), ylim=(-lim[1], lim[1]), ax=ax
+    )
+    plt.title("Most Likely Dynamics, Laplace-EM")
+    plt.show()

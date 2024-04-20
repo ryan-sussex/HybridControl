@@ -88,8 +88,8 @@ def project(u, v):
 
 if __name__ == "__main__":
 
-    A = np.array([[0, 1], [0, 1]])
-    B = np.array([[1, 0], [1, 1]])
+    A = np.array([[-1, 0], [0, 1]])
+    B = np.array([[1, 0], [0.1, 0]])
 
     Q = np.eye(2) * 100
 
@@ -123,7 +123,7 @@ if __name__ == "__main__":
     x = x_0
     traj = [x]
     for t in range(100):
-        u = lc.finite_horizon(x, t=t, T=1, x_ref=x_ref)
+        u = lc.finite_horizon(x, t=t, T=6, x_ref=x_ref)
         x = A @ x + B @ u + np.random.normal([0, 0], scale=0.2)
         traj.append(x)
     X = np.column_stack(traj)
