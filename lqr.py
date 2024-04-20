@@ -34,59 +34,51 @@ class LinearController:
         """
         n_dims = c.shape[0]
         std_basis = np.eye(n_dims)
-        c = c / (c@c)
+        c = c / (c @ c)
         basis = [c]
         for i in range(n_dims - 1):
-            vec = project(std_basis[i],  basis[i])
-            vec = vec / (vec@vec)
+            vec = project(std_basis[i], basis[i])
+            vec = vec / (vec @ vec)
             basis.append(vec)
-            # assert np.abs(vec @ c) < .01 
+            # assert np.abs(vec @ c) < .01
         return basis
-    
+
     def infinite_horizon(self, x, x_ref=None):
         if self.S_ih is None:
             S = solve_discrete_are(self.A, self.B, self.Q, self.R)
             self.S_ih = S
 
-        K = np.linalg.inv(self.R + self.B.T @ self.S_ih @ self.B) @ self.B.T @ self.S_ih @ self.A 
-        
+        K = (
+            np.linalg.inv(self.R + self.B.T @ self.S_ih @ self.B)
+            @ self.B.T
+            @ self.S_ih
+            @ self.A
+        )
+
         if x_ref is None:
             x_ref = np.array([0, 0])
 
-        return - K @ (x - x_ref)
-    
+        return -K @ (x - x_ref)
 
     def finite_horizon(self, x, T):
         pass
 
 
 def project(u, v):
-    return u - (u @ v)/(v @ v) * v
+    return u - (u @ v) / (v @ v) * v
 
 
 if __name__ == "__main__":
 
-    A = np.array(
-        [
-            [0, 1],
-            [0, 1]
-        ]
-    )
-    B = np.array(
-        [
-            [1, 0],
-            [1, 1]
-        ]
-    )   
-    
+    A = np.array([[0, 1], [0, 1]])
+    B = np.array([[1, 0], [1, 1]])
+
     Q = np.eye(2) * 20
 
     lc = LinearController(A, B, Q, Q)
 
-    x_0 = np.array([0,6])
-    print(
-        lc.infinite_horizon(x_0)
-    )
+    x_0 = np.array([0, 6])
+    print(lc.infinite_horizon(x_0))
 
     x_ref = np.array([-3, 4])
 
@@ -94,23 +86,21 @@ if __name__ == "__main__":
     traj = [x]
     for _ in range(10):
         u = lc.infinite_horizon(x, x_ref=x_ref)
-        x = A @ x + B @ u 
+        x = A @ x + B @ u
         # + np.random.normal([0,0], scale=0.2)
-        traj.append(x) 
+        traj.append(x)
     X = np.column_stack(traj)
 
     for i in range(X.shape[1]):
         plt.plot(
-            X[0, i], 
+            X[0, i],
             X[1, i],
-            color=(0.1, 0.2, i/X.shape[1]),
-            marker="o", 
-            linestyle="none"
+            color=(0.1, 0.2, i / X.shape[1]),
+            marker="o",
+            linestyle="none",
         )
-    
+
     plt.show()
-
-
 
     # def plot_boundary(f, ax=None, line_only: bool = True):
     #     scale = 5
@@ -141,18 +131,17 @@ if __name__ == "__main__":
     # f = lambda x: (x - d) @ c
     # plot_boundary(f, ax=ax1, line_only=True)
 
-
     # basis = LinearController.get_basis_vecs(c)
     # k = 34
     # pt = k * basis[1] - d
-    
+
     # P = np.array(basis)
     # def cost(P, x):
     #     P_ = P @ x.T
     #     Q = np.eye(x.shape[0]) * 10
     #     Q[0, 0] = 0
     #     return P_.T @ Q @ P_
-    
+
     # print(
     #     cost(P, np.array([-1, 1]))
     # )
@@ -162,5 +151,3 @@ if __name__ == "__main__":
     # cst = lambda x: cost(P, x)
     # plot_boundary(cst, ax=ax2, line_only=False)
     # plt.show()
-
-    
