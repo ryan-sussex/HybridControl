@@ -21,6 +21,20 @@ class Null(Condition):
         return False
 
 
+class HyperPlane(Condition):
+    """
+    Evaluates if x.c > d
+    """
+    
+    def __init__(self, c, d) -> None:
+        super().__init__()
+        self.c = c
+        self.d = d
+    
+    def evaluate(self, x) -> bool:
+        return self.c @ x - self.d > 0 
+
+
 class LinearSystem:
 
     def __init__(self, A, B, condition: Optional[Condition]=None) -> None:
@@ -74,13 +88,15 @@ if __name__ == "__main__":
     class Positive(Condition):
         def evaluate(self, x) -> bool:
             return x[0] > 0
+        
+    hyperplane = HyperPlane(np.array([1]), 1)
     
     env = SwitchSystem(
         linear_systems=[
-            LinearSystem(np.array([[3]]), np.array([[1]])),
-            LinearSystem(np.array([[1]]), np.array([[1]]), condition=Positive())
+            LinearSystem(np.array([[2]]), np.array([[1]])),
+            LinearSystem(np.array([[1]]), np.array([[1]]), condition=hyperplane)
         ],
-        x = np.array([-1])
+        x = np.array([.2])
     )
 
     for _ in range(10):
