@@ -1,7 +1,7 @@
 """
 Code for creating toy switching system with same api as gym.
 """
-from typing import List, Optional
+from typing import List, Optional, Callable
 from abc import ABC
 import numpy as np
 
@@ -52,6 +52,11 @@ class LinearSystem:
     def reset():
         pass
 
+    def reward(x, reward_func: Optional[Callable] = None):
+        if reward_func:
+            return reward_func(x)
+        return -1
+
 
 class SwitchSystem:
 
@@ -77,10 +82,15 @@ class SwitchSystem:
             obs, reward, terminated, truncated, info
         """
         self.x = self.forward(self.x, u)
-        return self.x, None, None, None, None
+        return self.x, self.reward(self.x), None, None, None
 
     def reset():
         pass
+
+    def reward(self, x, reward_func: Optional[Callable] = None):
+        if reward_func:
+            return reward_func(x)
+        return -1
 
 
 if __name__ == "__main__":
