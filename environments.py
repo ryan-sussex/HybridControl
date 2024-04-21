@@ -32,7 +32,8 @@ class HyperPlane(Condition):
         self.d = d
     
     def evaluate(self, x) -> bool:
-        return self.c @ x - self.d > 0 
+        print(self.c.dot(x) - self.d)
+        return self.c.dot(x) - self.d > 0 
 
 
 class LinearSystem:
@@ -42,7 +43,7 @@ class LinearSystem:
         self.B = B
         self.dims = self.A.shape[0]
         self.condition = Null() if condition is None else condition
-    
+
     def forward(self, x, u):
         return self.A @ x + self.B @ u
 
@@ -67,7 +68,7 @@ class SwitchSystem:
     ) -> None:
         self.dims = linear_systems[0].dims
         self.linear_systems = linear_systems
-        self.x = x if x is not None else np.zeros((self.dims, 1))
+        self.x = x if x is not None else np.zeros((self.dims,))
         pass
 
     def forward(self, x, u):
@@ -85,6 +86,7 @@ class SwitchSystem:
         return self.x, self.reward(self.x), None, None, None
 
     def reset(self, *args, **kwargs):
+        self.x = np.zeros((self.dims,))
         return self.x, None
 
     def reward(self, x, reward_func: Optional[Callable] = None):
@@ -100,14 +102,24 @@ class Positive(Condition):
     def evaluate(self, x) -> bool:
         return x[0] > 0
     
-hyperplane = HyperPlane(np.array([2]), 1)
+
+
+A_1 = np.array([[0, 0], [0, 1]])
+B_1 = np.array([[0, 0], [0, 1]])
+
+A_2 = np.array([[-1, 0], [0, 1]])
+B_2 = np.array([[1, 0], [0, -2]])
+
+
+hyperplane = HyperPlane(np.array([1, 1]).T, 0)
+
 
 env = SwitchSystem(
     linear_systems=[
-        LinearSystem(np.array([[.2]]), np.array([[1]])),
-        LinearSystem(np.array([[-.1]]), np.array([[1]]), condition=hyperplane)
+        LinearSystem(A_1, B_1),
+        LinearSystem(A_2, B_2, condition=hyperplane)
     ],
-    x = np.array([.2])
+    x = np.array([0, 1])
 )
 
 
@@ -115,7 +127,7 @@ if __name__ == "__main__":
 
 
     for _ in range(10):
-        res = env.step(u=np.array([0]))
+        res = env.step(u=np.array([0, 1]))
         print(res)
 
 

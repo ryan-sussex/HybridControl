@@ -117,30 +117,24 @@ def plot_phases(Ws, rs, ax=None):
 
 def add_derivatives(data):
     v = np.diff(data, axis=0)
-    a = np.diff(data, axis=0, n=2)
-    return np.hstack((data[: a.shape[0], :], v[: a.shape[0], :], a))
+    # a = np.diff(data, axis=0, n=2)
+    return np.hstack((data[: v.shape[0], :], v[: v.shape[0], :]))
 
 
 def policy(env, obs, t, horizon=200):
-    i = np.random.randint(0, 10)
-    if i > 6:
-        return np.random.randint(0, 2)
-    a = 2
-    if obs[-1, -3] < 0:
-        a = 0
-    # if obs[-1, 3] > 1:
-    #     a = 2
-    # elif obs[-1, 3] < -1:
-    #     a = 0
-    return a
+    return np.random.normal(np.array([0,0]), .5)
+
+
+def p_0():
+    return np.random.normal(np.array([0,0]), .1)
 
 
 def data_to_array(data: List, actions: List):
     # convert to arrays and add derivatives
     data = np.stack(data)
-    actions = np.stack(actions)[:, np.newaxis]
-    data = add_derivatives(data)
-    data = np.hstack((data, actions[:data.shape[0]]))
+    actions = np.stack(actions)
+    # data = add_derivatives(data)
+    # data = np.hstack((data, actions[:data.shape[0]]))
     return data
 
 if __name__ == "__main__":
@@ -153,10 +147,11 @@ if __name__ == "__main__":
     actions = []
     observation, info = env.reset(seed=42)
 
-    action = 0
+    action = p_0()
+
     for i in tqdm(range(STEPS)):
 
-        observation, reward, terminated, truncated, info = env.step(np.array([action]))
+        observation, reward, terminated, truncated, info = env.step(action)
         # if terminated or truncated:
         #     observation, info = env.reset()
         
@@ -164,16 +159,23 @@ if __name__ == "__main__":
         actions.append(action)
         if i > 5:
             obs = data_to_array(data, actions)
-            action += np.random.normal(loc=0, scale=1)
-            # action = policy(env, obs, t=i)
+            # action += np.random.normal(loc=0, scale=1)
+            action = policy(env, obs, t=i)
+        
+        print(observation)
+
+        if observation.dot(observation) > 20:
+            env.reset()
 
     env.close()
 
 
     data = obs
     y = data
-    D_latent = 2  # Latent dimension
     D_obs = data.shape[1]  # Data dimension
+    # D_latent = 4  # Latent dimension
+    D_latent = D_obs  # Latent dimension
+
     K = 2  # Number of components
 
     # Fit SLDS
@@ -183,7 +185,7 @@ if __name__ == "__main__":
         D_latent,
         transitions="recurrent_only",
         dynamics="diagonal_gaussian",
-        emissions="gaussian_orthog",
+        emissions="gaussian_id",
         single_subspace=True,
     )
 
@@ -223,25 +225,25 @@ if __name__ == "__main__":
     #position
     plot_original(data, ax=ax1)
     # vel
-    plt.figure(figsize=(6, 6))
-    ax2 = plt.subplot(131)
-    plot_original(data[:, 2:], ax=ax2)
-    # acc
-    plt.figure(figsize=(6, 6))
-    ax3 = plt.subplot(131)
-    plot_original(data[:, 2:], ax=ax3)
+    # plt.figure(figsize=(6, 6))
+    # ax2 = plt.subplot(131)
+    # plot_original(data[:, 2:], ax=ax2)
+    # # acc
+    # plt.figure(figsize=(6, 6))
+    # ax3 = plt.subplot(131)
+    # plot_original(data[:, 2:], ax=ax3)
 
 
     plt.figure(figsize=(6, 6))
     ax4 = plt.subplot(131)
-    plot_trajectory(zhat, xhat, ax=ax1)
+    plot_trajectory(zhat, xhat, ax=ax4)
     plt.title("Inferred, Laplace-EM")
 
-    plt.figure(figsize=(6, 6))
-    ax = plt.subplot(111)
-    lim = abs(xhat).max(axis=0) + 1
-    plot_most_likely_dynamics(
-        rslds, xlim=(-lim[0], lim[0]), ylim=(-lim[1], lim[1]), ax=ax
-    )
-    plt.title("Most Likely Dynamics, Laplace-EM")
+    # plt.figure(figsize=(6, 6))
+    # ax = plt.subplot(111)
+    # lim = abs(xhat).max(axis=0) + 1
+    # plot_most_likely_dynamics(
+    #     rslds, xlim=(-lim[0], lim[0]), ylim=(-lim[1], lim[1]), ax=ax
+    # )
+    # plt.title("Most Likely Dynamics, Laplace-EM")
     plt.show()
