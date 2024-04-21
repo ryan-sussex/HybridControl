@@ -32,7 +32,6 @@ class HyperPlane(Condition):
         self.d = d
     
     def evaluate(self, x) -> bool:
-        print(self.c.dot(x) - self.d)
         return self.c.dot(x) - self.d > 0 
 
 
@@ -105,13 +104,13 @@ class Positive(Condition):
 
 
 A_1 = np.array([[0, 0], [0, 1]])
-B_1 = np.array([[0, 0], [0, 1]])
+B_1 = np.array([[1, 0], [0, 1]])
 
-A_2 = np.array([[-1, 0], [0, 1]])
-B_2 = np.array([[1, 0], [0, -2]])
+A_2 = np.array([[-1, 0], [0, -1]])
+B_2 = np.array([[1, 0], [0, 1]])
 
 
-hyperplane = HyperPlane(np.array([1, 1]).T, 0)
+hyperplane = HyperPlane(np.array([1, -1]).T, 0)
 
 
 env = SwitchSystem(

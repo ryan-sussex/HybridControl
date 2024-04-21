@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from tqdm import tqdm
 
-from environments import env
+from environments import env, hyperplane
 
 color_names = ["windows blue", "red", "amber", "faded green"]
 colors = sns.xkcd_palette(color_names)
@@ -107,12 +107,12 @@ def plot_phases(Ws, rs, ax=None):
     min_ = min(rs)
     max_ = max(rs)
     x = np.linspace(min_, max_, 100)
-    for i in range(len(Ws)):
+    for i in range(len(Ws)-1):
         y = rs[i] - Ws[i][0]/Ws[i][1] * x
-        ax.plot(
-            x,
-            y
-        )
+        ax.plot(x, y)
+    y = rs[-1] - Ws[-1][0]/Ws[-1][1] * x
+    ax.plot(x, y, linestyle="dotted")
+
 
 
 def add_derivatives(data):
@@ -122,7 +122,7 @@ def add_derivatives(data):
 
 
 def policy(env, obs, t, horizon=200):
-    return np.random.normal(np.array([0,0]), .5)
+    return np.random.normal(np.array([0,0]), 1)
 
 
 def p_0():
@@ -162,9 +162,7 @@ if __name__ == "__main__":
             # action += np.random.normal(loc=0, scale=1)
             action = policy(env, obs, t=i)
         
-        print(observation)
-
-        if observation.dot(observation) > 20:
+        if observation.dot(observation) > 50:
             env.reset()
 
     env.close()
@@ -206,6 +204,9 @@ if __name__ == "__main__":
         print("w", Rs[i])
         print("b", rs[i])
 
+    Rs = np.vstack([Rs, hyperplane.c])
+    rs = np.hstack([rs, hyperplane.d])
+
     
     # def get_region()
 
@@ -214,7 +215,6 @@ if __name__ == "__main__":
     # plt.figure(figsize=(6, 6))
     # ax1 = plt.subplot(131)
     plot_phases(Rs, rs)
-    plt.show()
 
 
 
@@ -239,11 +239,11 @@ if __name__ == "__main__":
     plot_trajectory(zhat, xhat, ax=ax4)
     plt.title("Inferred, Laplace-EM")
 
-    # plt.figure(figsize=(6, 6))
-    # ax = plt.subplot(111)
-    # lim = abs(xhat).max(axis=0) + 1
-    # plot_most_likely_dynamics(
-    #     rslds, xlim=(-lim[0], lim[0]), ylim=(-lim[1], lim[1]), ax=ax
-    # )
-    # plt.title("Most Likely Dynamics, Laplace-EM")
+    plt.figure(figsize=(6, 6))
+    ax = plt.subplot(111)
+    lim = abs(xhat).max(axis=0) + 1
+    plot_most_likely_dynamics(
+        rslds, xlim=(-lim[0], lim[0]), ylim=(-lim[1], lim[1]), ax=ax
+    )
+    plt.title("Most Likely Dynamics, Laplace-EM")
     plt.show()
