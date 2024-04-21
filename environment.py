@@ -1,0 +1,91 @@
+"""
+Code for creating toy switching system with same api as gym.
+"""
+from typing import List, Optional
+from abc import ABC
+import numpy as np
+
+
+class Condition(ABC):
+
+    def __init__(self) -> None:
+        pass
+
+    def evaluate(self, x) -> bool:
+        raise NotImplementedError("This is ABC")
+
+
+class Null(Condition):
+
+    def evaluate(self, x) -> bool:
+        return False
+
+
+class LinearSystem:
+
+    def __init__(self, A, B, condition: Optional[Condition]=None) -> None:
+        self.A = A
+        self.B = B
+        self.dims = self.A.shape[0]
+        self.condition = Null() if condition is None else condition
+    
+    def forward(self, x, u):
+        return self.A @ x + self.B @ u
+
+    def step():
+        pass
+
+    def reset():
+        pass
+
+
+class SwitchSystem:
+
+    def __init__(
+            self, 
+            linear_systems: List[LinearSystem],
+            x = None
+    ) -> None:
+        self.dims = linear_systems[0].dims
+        self.linear_systems = linear_systems
+        self.x = x if x is not None else np.zeros((self.dims, 1))
+        pass
+
+    def forward(self, x, u):
+        for linear in self.linear_systems:
+            if linear.condition.evaluate(x):
+                return linear.forward(x, u)
+        return self.linear_systems[0].forward(x, u)
+
+    def step(self, u):
+        """
+        Returns:
+            obs, reward, terminated, truncated, info
+        """
+        self.x = self.forward(self.x, u)
+        return self.x, None, None, None, None
+
+    def reset():
+        pass
+
+
+if __name__ == "__main__":
+
+    class Positive(Condition):
+        def evaluate(self, x) -> bool:
+            return x[0] > 0
+    
+    env = SwitchSystem(
+        linear_systems=[
+            LinearSystem(np.array([[3]]), np.array([[1]])),
+            LinearSystem(np.array([[1]]), np.array([[1]]), condition=Positive())
+        ],
+        x = np.array([-1])
+    )
+
+    for _ in range(10):
+        res = env.step(u=np.array([0]))
+        print(res)
+
+
+    
