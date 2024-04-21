@@ -84,30 +84,35 @@ class SwitchSystem:
         self.x = self.forward(self.x, u)
         return self.x, self.reward(self.x), None, None, None
 
-    def reset():
-        pass
+    def reset(self, *args, **kwargs):
+        return self.x, None
 
     def reward(self, x, reward_func: Optional[Callable] = None):
         if reward_func:
             return reward_func(x)
         return -1
+    
+    def close(self):
+        return None
+
+
+class Positive(Condition):
+    def evaluate(self, x) -> bool:
+        return x[0] > 0
+    
+hyperplane = HyperPlane(np.array([2]), 1)
+
+env = SwitchSystem(
+    linear_systems=[
+        LinearSystem(np.array([[.2]]), np.array([[1]])),
+        LinearSystem(np.array([[-.1]]), np.array([[1]]), condition=hyperplane)
+    ],
+    x = np.array([.2])
+)
 
 
 if __name__ == "__main__":
 
-    class Positive(Condition):
-        def evaluate(self, x) -> bool:
-            return x[0] > 0
-        
-    hyperplane = HyperPlane(np.array([1]), 1)
-    
-    env = SwitchSystem(
-        linear_systems=[
-            LinearSystem(np.array([[2]]), np.array([[1]])),
-            LinearSystem(np.array([[1]]), np.array([[1]]), condition=hyperplane)
-        ],
-        x = np.array([.2])
-    )
 
     for _ in range(10):
         res = env.step(u=np.array([0]))
