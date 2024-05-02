@@ -79,13 +79,22 @@ def convert_to_servo(linear_controller: LinearController) -> LinearController:
         ]
     )
     B = np.block(
-        [linear_controller.B, np.zeros(B_shape)]
+        [[linear_controller.B], [np.zeros(B_shape)]]
     )
-    Q = np.zeros(A.shape)
-    Q[:A_shape[0], :A_shape[1]] = linear_controller.Q
-    R = np.zeros(A.shape)
-    R[:A_shape[0], :A_shape[1]] = linear_controller.Q
-    return LinearController(A, B, Q, R)
+    Q = np.block(
+        [
+            [np.zeros(A_shape), np.zeros(A_shape)],
+            [np.zeros(A_shape), linear_controller.Q]
+        ]
+    )
+    # print(Q)
+    # # R = np.block(
+    # #         [[linear_controller.R], [np.zeros(B_shape)]]
+    # # )
+    # print(A.shape)
+    # print(B.shape)
+    # print(Q.shape)
+    return LinearController(A, B, Q, linear_controller.R)
 
 
 def calculate_gain(A, B, Q, R, S):
@@ -104,8 +113,8 @@ def project(u, v):
 
 if __name__ == "__main__":
 
-    A = np.array([[-1, 0], [0, 1]])
-    B = np.array([[1, 0], [0.1, 0]])
+    A = np.array([[-1, 1], [2, 1]])
+    B = np.array([[1, 2], [0.1, 3]])
 
     Q = np.eye(2) * 100
 
@@ -121,14 +130,13 @@ if __name__ == "__main__":
 
     x = x_0
     traj = [x]
-    e = 0
+    e = x - x_0
     x_bar = np.r_[x, e]
     for _ in range(100):
-        print(x_bar.shape)
         u = lc.infinite_horizon(x_bar)
         x = A @ x + B @ u + np.random.normal([0, 0], scale=0.2)
         traj.append(x)
-    
+    print(x)
     X = np.column_stack(traj)
 
 
@@ -142,22 +150,22 @@ if __name__ == "__main__":
             linestyle="none",
         )
 
-    x = x_0
-    traj = [x]
-    for t in range(100):
-        u = lc.finite_horizon(x, t=t, T=6, x_ref=x_ref)
-        x = A @ x + B @ u + np.random.normal([0, 0], scale=0.2)
-        traj.append(x)
-    X = np.column_stack(traj)
+    # x = x_0
+    # traj = [x]
+    # for t in range(100):
+    #     u = lc.finite_horizon(x, t=t, T=6, x_ref=x_ref)
+    #     x = A @ x + B @ u + np.random.normal([0, 0], scale=0.2)
+    #     traj.append(x)
+    # X = np.column_stack(traj)
 
-    # ax2 = plt.subplot(111)
-    for i in range(X.shape[1]):
-        ax1.plot(
-            X[0, i],
-            X[1, i],
-            color=(0.3, 0.7, i / X.shape[1]),
-            marker="o",
-            linestyle="none",
-        )
+    # # ax2 = plt.subplot(111)
+    # for i in range(X.shape[1]):
+    #     ax1.plot(
+    #         X[0, i],
+    #         X[1, i],
+    #         color=(0.3, 0.7, i / X.shape[1]),
+    #         marker="o",
+    #         linestyle="none",
+    #     )
 
     plt.show()
