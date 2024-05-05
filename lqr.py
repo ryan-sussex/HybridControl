@@ -69,31 +69,41 @@ class LinearController:
         return self.finite_horizon(x, t, T)
 
 
-def convert_to_servo(linear_controller: LinearController) -> LinearController:
+def convert_to_servo(
+        linear_controller: LinearController, x_ref
+) -> LinearController:
+    """
+    Translates the linear system to the affine system in (x-x_ref) coords
+        z = [x - x_ref, 1]
+        z = Az + Bu
+    
+    Where 
+        A <- [A, b; 0, 1]
+        B <- [B, 0]
+    
+    and Q is transported to the point x_ref.
+    """
     A_shape = linear_controller.A.shape
     B_shape = linear_controller.B.shape
+
+    bias = (linear_controller.A- np.eye(A_shape[0])) @ x_ref
+    bias = bias[:, None]
+    zeros = np.zeros(A_shape[1])[:, None]
+    ones = np.array([[1]])
+
     A = np.block(
         [
-            [linear_controller.A, np.zeros(A_shape)],
-            [np.eye(A_shape[0]), np.zeros(A_shape)]
+            [linear_controller.A, bias],
+            [zeros.T, ones]
         ]
     )
     B = np.block(
-        [[linear_controller.B], [np.zeros(B_shape)]]
+        [[linear_controller.B], [np.zeros((1, B_shape[1]))]]
     )
-    Q = np.block(
-        [
-            [np.zeros(A_shape), np.zeros(A_shape)],
-            [np.zeros(A_shape), linear_controller.Q]
-        ]
+    Q = np.zeros(A.shape)
+    Q[:linear_controller.Q.shape[0], :linear_controller.Q.shape[1]] = (
+        linear_controller.Q
     )
-    # print(Q)
-    # # R = np.block(
-    # #         [[linear_controller.R], [np.zeros(B_shape)]]
-    # # )
-    # print(A.shape)
-    # print(B.shape)
-    # print(Q.shape)
     return LinearController(A, B, Q, linear_controller.R)
 
 
@@ -113,59 +123,44 @@ def project(u, v):
 
 if __name__ == "__main__":
 
-    A = np.array([[-1, 1], [2, 1]])
+    A = np.array([[-.1, .1], [.2, .1]])
     B = np.array([[1, 2], [0.1, 3]])
 
     Q = np.eye(2) * 100
-
-    lc = LinearController(A, B, Q, Q)
-
-    lc = convert_to_servo(lc)
+    R = np.eye(2) 
 
     x_0 = np.array([0, 6])
-    
-    x_ref = None
-    # x_ref = np.array([-3, 4])
-    # plt.figure(figsize=(6, 6))
+    x_ref = np.array([-30, 20])
+   
+   
+   
+    lc = LinearController(A, B, Q, R)
+    lc = convert_to_servo(lc, x_ref)
 
+
+
+    # Simulate system    
     x = x_0
+    x_bar = np.r_[x - x_ref, 1] # internal coords
     traj = [x]
-    e = x - x_0
-    x_bar = np.r_[x, e]
-    for _ in range(100):
-        u = lc.infinite_horizon(x_bar)
+    for t in range(100):
+        u = lc.finite_horizon(x_bar, t=t, T=100)
         x = A @ x + B @ u + np.random.normal([0, 0], scale=0.2)
+        x_bar = np.r_[x - x_ref, 1] # translate to internal coords
         traj.append(x)
-    print(x)
+    
     X = np.column_stack(traj)
 
 
+    # Plots
     ax1 = plt.subplot(111)
     for i in range(X.shape[1]):
         ax1.plot(
             X[0, i],
             X[1, i],
-            color=(0.5, 0.2, i / X.shape[1]),
-            marker="x",
+            color=(0.3, 0.7, i / X.shape[1]),
+            marker="o",
             linestyle="none",
         )
-
-    # x = x_0
-    # traj = [x]
-    # for t in range(100):
-    #     u = lc.finite_horizon(x, t=t, T=6, x_ref=x_ref)
-    #     x = A @ x + B @ u + np.random.normal([0, 0], scale=0.2)
-    #     traj.append(x)
-    # X = np.column_stack(traj)
-
-    # # ax2 = plt.subplot(111)
-    # for i in range(X.shape[1]):
-    #     ax1.plot(
-    #         X[0, i],
-    #         X[1, i],
-    #         color=(0.3, 0.7, i / X.shape[1]),
-    #         marker="o",
-    #         linestyle="none",
-    #     )
-
+    print(x)
     plt.show()
