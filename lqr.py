@@ -44,18 +44,15 @@ class LinearController:
             # assert np.abs(vec @ c) < .01
         return basis
 
-    def infinite_horizon(self, x, x_ref=None):
+    def infinite_horizon(self, x):
         if self.S_ih is None:
             S = solve_discrete_are(self.A, self.B, self.Q, self.R)
             self.S_ih = S
 
         K = calculate_gain(self.A, self.B, self.Q, self.R, self.S_ih)
+        return -K @ x
 
-        if x_ref is None:
-            x_ref = np.array([0, 0])
-        return -K @ (x - x_ref)
-
-    def finite_horizon(self, x, t, T, x_ref=None):
+    def finite_horizon(self, x, t, T):
         if self.Ks is not None:
             if t >= T:
                 t = T - 1
@@ -70,6 +67,44 @@ class LinearController:
 
         self.Ks = [calculate_gain(self.A, self.B, self.Q, self.R, S) for S in Ss]
         return self.finite_horizon(x, t, T)
+
+
+def convert_to_servo(
+        linear_controller: LinearController, x_ref
+) -> LinearController:
+    """
+    Translates the linear system to the affine system in (x-x_ref) coords
+        z = [x - x_ref, 1]
+        z = Az + Bu
+    
+    Where 
+        A <- [A, b; 0, 1]
+        B <- [B, 0]
+    
+    and Q is transported to the point x_ref.
+    """
+    A_shape = linear_controller.A.shape
+    B_shape = linear_controller.B.shape
+
+    bias = (linear_controller.A- np.eye(A_shape[0])) @ x_ref
+    bias = bias[:, None]
+    zeros = np.zeros(A_shape[1])[:, None]
+    ones = np.array([[1]])
+
+    A = np.block(
+        [
+            [linear_controller.A, bias],
+            [zeros.T, ones]
+        ]
+    )
+    B = np.block(
+        [[linear_controller.B], [np.zeros((1, B_shape[1]))]]
+    )
+    Q = np.zeros(A.shape)
+    Q[:linear_controller.Q.shape[0], :linear_controller.Q.shape[1]] = (
+        linear_controller.Q
+    )
+    return LinearController(A, B, Q, linear_controller.R)
 
 
 def calculate_gain(A, B, Q, R, S):
@@ -88,47 +123,37 @@ def project(u, v):
 
 if __name__ == "__main__":
 
-    A = np.array([[-1, 0], [0, 1]])
-    B = np.array([[1, 0], [0.1, 0]])
+    A = np.array([[-.1, .1], [.2, .1]])
+    B = np.array([[1, 2], [0.1, 3]])
 
     Q = np.eye(2) * 100
-
-    lc = LinearController(A, B, Q, Q)
+    R = np.eye(2) 
 
     x_0 = np.array([0, 6])
-    print(lc.infinite_horizon(x_0))
+    x_ref = np.array([-30, 20])
+   
+   
+   
+    lc = LinearController(A, B, Q, R)
+    lc = convert_to_servo(lc, x_ref)
 
-    x_ref = None
-    # x_ref = np.array([-3, 4])
-    # plt.figure(figsize=(6, 6))
+
+
+    # Simulate system    
     x = x_0
-    traj = [x]
-    for _ in range(100):
-        u = lc.infinite_horizon(x, x_ref=x_ref)
-        x = A @ x + B @ u + np.random.normal([0, 0], scale=0.2)
-        traj.append(x)
-    X = np.column_stack(traj)
-
-
-    ax1 = plt.subplot(111)
-    for i in range(X.shape[1]):
-        ax1.plot(
-            X[0, i],
-            X[1, i],
-            color=(0.5, 0.2, i / X.shape[1]),
-            marker="x",
-            linestyle="none",
-        )
-
-    x = x_0
+    x_bar = np.r_[x - x_ref, 1] # internal coords
     traj = [x]
     for t in range(100):
-        u = lc.finite_horizon(x, t=t, T=6, x_ref=x_ref)
+        u = lc.finite_horizon(x_bar, t=t, T=100)
         x = A @ x + B @ u + np.random.normal([0, 0], scale=0.2)
+        x_bar = np.r_[x - x_ref, 1] # translate to internal coords
         traj.append(x)
+    
     X = np.column_stack(traj)
 
-    # ax2 = plt.subplot(111)
+
+    # Plots
+    ax1 = plt.subplot(111)
     for i in range(X.shape[1]):
         ax1.plot(
             X[0, i],
@@ -137,55 +162,5 @@ if __name__ == "__main__":
             marker="o",
             linestyle="none",
         )
-
+    print(x)
     plt.show()
-
-    # def plot_boundary(f, ax=None, line_only: bool = True):
-    #     scale = 5
-    #     x_1 = np.linspace(-scale, scale, 20)
-    #     x_2 = np.linspace(-scale, scale, 20)
-    #     X, Y = np.meshgrid(x_1, x_2)
-    #     xy = np.column_stack((X.ravel(), Y.ravel()))
-    #     f_xy = np.array(list(map(f, xy)))
-    #     f_xy_norm = (f_xy - f_xy.min()) / (f_xy.max() - f_xy.min())
-    #     for i in range(len(xy)):
-    #         if line_only and (f_xy_norm[i]- f_xy_norm.min()) > .01:
-    #             continue
-    #         ax.plot(
-    #             xy[i, 0],
-    #             xy[i, 1],
-    #             marker="o",
-    #             color=(0.1, 0.2, f_xy_norm[i]),
-    #             alpha=1 if line_only else f_xy_norm[i],
-    #             linestyle="none",
-    #         )
-    #     return
-
-    # plt.figure(figsize=(6, 6))
-    # ax1 = plt.subplot(111)
-
-    # d = np.array([1, 1])
-    # c = np.array([-1, 1])
-    # f = lambda x: (x - d) @ c
-    # plot_boundary(f, ax=ax1, line_only=True)
-
-    # basis = LinearController.get_basis_vecs(c)
-    # k = 34
-    # pt = k * basis[1] - d
-
-    # P = np.array(basis)
-    # def cost(P, x):
-    #     P_ = P @ x.T
-    #     Q = np.eye(x.shape[0]) * 10
-    #     Q[0, 0] = 0
-    #     return P_.T @ Q @ P_
-
-    # print(
-    #     cost(P, np.array([-1, 1]))
-    # )
-
-    # plt.figure(figsize=(6, 6))
-    # ax2 = plt.subplot(111)
-    # cst = lambda x: cost(P, x)
-    # plot_boundary(cst, ax=ax2, line_only=False)
-    # plt.show()
