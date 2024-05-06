@@ -78,8 +78,8 @@ def get_basis_vecs(c):
 
 if __name__ == "__main__":
 
-    W = np.random.randint(-10, 10, (5, 3))
-    b = np.random.randint(-10, 10, (5, 1))
+    W = np.random.randint(-10, 10, (10, 3))
+    b = np.random.randint(-10, 10, (10, 1))
 
 
     A = extract_adjacency(W, b)
