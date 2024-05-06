@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from tqdm import tqdm
 
-from environments import env, hyperplane
+from examples.environments import env, hyperplane
 
 color_names = ["windows blue", "red", "amber", "faded green"]
 colors = sns.xkcd_palette(color_names)
