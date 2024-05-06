@@ -22,6 +22,13 @@ def extract_adjacency(W: np.ndarray, b: np.ndarray) -> np.ndarray:
 
 
 def get_polytope_rep(W: np.ndarray, b: np.ndarray, i):
+    """
+    Considering softmax(Wx + b)
+    
+    For a given i (discrete region), finds the system of inequalities
+        W_ x <= b_
+    governing the region for which i is active, (largest in the softmax)
+    """
     w_mode = W[i]
     b_mode = b[i]
     W_ = W - w_mode
@@ -34,19 +41,14 @@ def check_for_redundancy(W, b):
     for i in range(len(W)):
         res = linprog(W[i], A_ub=-W, b_ub=-b)
         if res["status"] == 0:
-            redundant.append(
-                (np.abs(res["fun"] - b[i]).sum() > .1)
-            )
+            redundant.append((np.abs(res["fun"] - b[i]).sum() > 0.001))
         else:
             redundant.append(False)
     return redundant
 
 
 def get_hplane_intersection(
-        w_1: np.ndarray, 
-        w_2: np.ndarray, 
-        b_1: float = 0, 
-        b_2: float = 0
+    w_1: np.ndarray, w_2: np.ndarray, b_1: float = 0, b_2: float = 0
 ):
     """
     N-dim Hyperplanes defined by w dot x = 0
@@ -80,7 +82,6 @@ if __name__ == "__main__":
 
     W = np.random.randint(-10, 10, (10, 3))
     b = np.random.randint(-10, 10, (10, 1))
-
 
     A = extract_adjacency(W, b)
 
