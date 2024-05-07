@@ -54,7 +54,7 @@ def check_for_redundancy(W, b):
             # print(np.abs(res["fun"] - b[i]).sum())
             is_redundant = np.abs(res["fun"] + b[i]).sum() > 0.1
             logger.info(
-                "..linear program constraint check found j={str(i)},"
+                f"..linear program constraint check found j={str(i)},"
                 f"redundant {is_redundant}"
             )
             redundant.append(is_redundant)
