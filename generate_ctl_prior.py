@@ -47,7 +47,7 @@ def generate_prior(W, r, x_init, lr, n_steps, threshold, z):
     for i in range(n_steps):
         
         # add threshold
-        if softmax(x_hist[-1])[0] > threshold:
+        if softmax(x_hist[-1])[z] > threshold:
             return x_hist
         
         a = np.dot(W, x)+ r
@@ -69,19 +69,16 @@ r = np.array([0.06502312, 0.46049296])
 
 lr = 0.1 
 n_steps = 1000
-threshold = 0.99
-x_init = np.array([1,1]) # initialise x
+threshold = 0.9
+x_init = np.array([-10,10]) # initialise x
 
-
-x_hist = generate_prior(W, r, x_init, lr, n_steps, threshold, 1)
+x_hist = generate_prior(W, r, x_init, lr, n_steps, threshold, z=0)
 
 plt.plot(x_hist)
 plt.show()
-
 
 # check whether this makes sense as the max x 
 print(softmax(x_init))
 print(softmax(x_hist[-1]))
   
-
 
