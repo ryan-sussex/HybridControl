@@ -50,25 +50,31 @@ def generate_prior(W, r, x_init, lr, n_steps, threshold, z):
         if softmax(x_hist[-1])[z] > threshold:
             return x_hist
         
-        a = np.dot(W, x)+ r
-        b = np.dot(W[:,z], x)+ r[z]
-        partial_z = np.dot(softmax(b) * (np.eye(2)[z]-softmax(a)), W)
-        x_new = x + lr*partial_z
+        a = np.dot(W, x) + r
+        P = softmax(a)
+        ez = np.eye(P.shape[0])[z]
+        partial_P = W.T @ (ez - P)
+    
+        x_new = x + lr*partial_P
         x = x_new
         x_hist.append(x)
   
     x_hist = np.array(x_hist)
     
+    plt.plot(x_hist)
+    plt.show()
+    
     
     return x_hist
 
-
+'''
+# 2 states
 W = np.array([[-0.1823255 , -0.32050078],
               [-0.94378347,  0.24966832]])
 r = np.array([0.06502312, 0.46049296])
 
-lr = 0.1 
-n_steps = 1000
+lr = 0.1
+n_steps = 10000
 threshold = 0.9
 x_init = np.array([-10,10]) # initialise x
 
@@ -82,3 +88,4 @@ print(softmax(x_init))
 print(softmax(x_hist[-1]))
   
 
+'''
