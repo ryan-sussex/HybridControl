@@ -6,42 +6,18 @@ from abc import ABC
 import numpy as np
 
 
-class Condition(ABC):
-
-    def __init__(self) -> None:
-        pass
-
-    def evaluate(self, x) -> bool:
-        raise NotImplementedError("This is ABC")
-
-
-class Null(Condition):
-
-    def evaluate(self, x) -> bool:
-        return False
-
-
-class HyperPlane(Condition):
-    """
-    Evaluates if x.c > d
-    """
-    
-    def __init__(self, c, d) -> None:
-        super().__init__()
-        self.c = c
-        self.d = d
-    
-    def evaluate(self, x) -> bool:
-        return self.c.dot(x) - self.d > 0 
-
-
 class LinearSystem:
 
-    def __init__(self, A, B, condition: Optional[Condition]=None) -> None:
+    def __init__(self, A, B, w = None, b = None) -> None:
         self.A = A
         self.B = B
         self.dims = self.A.shape[0]
-        self.condition = Null() if condition is None else condition
+        if w is None:
+            w = np.zeros(self.dims)
+        if b is None:
+            b = 0
+        self.w = w
+        self.b = b
 
     def forward(self, x, u):
         return self.A @ x + self.B @ u
@@ -71,10 +47,9 @@ class SwitchSystem:
         pass
 
     def forward(self, x, u):
-        for linear in self.linear_systems:
-            if linear.condition.evaluate(x):
-                return linear.forward(x, u)
-        return self.linear_systems[0].forward(x, u)
+        likelihood = [linear.w @ x + linear.b for linear in self.linear_systems]
+        mode = np.argmax(likelihood)
+        return self.linear_systems[mode].forward(x, u)
 
     def step(self, u):
         """
@@ -95,8 +70,3 @@ class SwitchSystem:
     
     def close(self):
         return None
-
-
-class Positive(Condition):
-    def evaluate(self, x) -> bool:
-        return x[0] > 0

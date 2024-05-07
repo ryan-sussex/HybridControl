@@ -4,9 +4,8 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 
 from ssm import LDS, SLDS
-from environments import env, hyperplane
+from library import get_linearly_seperated_env
 from utils import *
-
 
 
 def system_identification(
@@ -78,6 +77,9 @@ if __name__ == "__main__":
     K = 2
     N_ITER = 100
     N_STEPS = 100
+    env = get_linearly_seperated_env()
+
+
     results = system_identification(
         env, 
         k_components=2, 
@@ -95,9 +97,11 @@ if __name__ == "__main__":
         print("w", Rs[i])
         print("b", rs[i])
 
-    Rs = np.vstack([Rs, hyperplane.c])
-    rs = np.hstack([rs, hyperplane.d])
-
+    true_hplane = env.linear_systems[0]
+    Rs = np.vstack([Rs, env.linear_systems[0].w])
+    rs = np.hstack([rs, env.linear_systems[0].b])
+    Rs = np.vstack([Rs, env.linear_systems[1].w])
+    rs = np.hstack([rs, env.linear_systems[1].b])
 
     plot_phases(Rs, rs)
 
