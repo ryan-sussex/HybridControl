@@ -30,13 +30,13 @@ def get_three_region_env(b_1=None, b_2=None, b_3=None):
 
     A_2 = np.array([[-1, 0], [0, -1]])
     B_2 = np.array([[1, 0], [0, 1]])
-    w_2 = np.array([0, 0])
+    w_2 = np.array([0, 1])
     if b_2 is None:
         b_2 =0 
 
     A_3 = np.array([[-1, 1], [0, -1]])
     B_3 = np.array([[1, 0], [0, 1]])
-    w_3 = np.array([0, 1])
+    w_3 = np.array([0, 0])
     if b_3 is None:
         b_3 = -3
     return SwitchSystem(

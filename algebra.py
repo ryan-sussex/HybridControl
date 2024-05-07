@@ -39,22 +39,27 @@ def get_polytope_rep(W: np.ndarray, b: np.ndarray, i):
     b = np.delete(b, (i), axis=0)
     W_ = W - w_mode
     b_ = b_mode - b
+    print(W_, b_)
     return W_, b_
 
 
 def check_for_redundancy(W, b):
     redundant = []
+    print("b", b)
     for i in range(len(W)):
-        res = linprog(W[i], A_ub=W, b_ub=-b)
+        # -ve because lingprog minimises, we need max
+        res = linprog(-W[i], A_ub=W, b_ub=b, bounds=(None, None))
         if res["status"] == 0:
-            is_redundant = (np.abs(res["fun"] - b[i]).sum() > 0.1)
+            # print(np.abs(res["fun"] - b[i]).sum())
+            is_redundant = (np.abs(res["fun"] + b[i]).sum() > 0.1)
             logger.info(f"..linear program constraint check found j={str(i)}, redundant {is_redundant}")
             redundant.append(is_redundant)
         elif res["status"] == 3:
             logger.info(f"..linear program constraint check is unbounded for j={str(i)}")
             redundant.append(False)
         else:
-            logger.info(f"..Linear program constraint check failed for node j={str(i)}")
+            status = res["status"]
+            logger.info(f"..Linear program constraint check failed for node j={str(i)} with code {status}")
             redundant.append(True)
     return redundant
 
@@ -91,21 +96,36 @@ def get_basis_vecs(c):
 
 
 if __name__ == "__main__":
+
+    # W = np.array(
+    #     [
+    #         [ 1],
+    #         [-1]
+    #     ]
+    # )
+    # b = np.array([5, 5])
+
+    # res = linprog(-W[1], A_ub=W, b_ub=b, method="simplex")
+
+    # print(res)
+    # # print("slack", res.slack)
+    # raise
+
+
+
+
     logging.basicConfig(level=logging.INFO)
 
     import matplotlib.pyplot as plt
     from examples.utils import plot_phases
     from examples.library import get_three_region_env, get_linearly_seperated_env
 
-    env = get_three_region_env(0, 0, -5)
+    env = get_three_region_env(0, 0, 5)
     
     # env = get_linearly_seperated_env()
 
     Ws = np.block([[linear.w] for linear in env.linear_systems])
     bs = np.block([linear.b for linear in env.linear_systems])
-
-    print(Ws)
-    print("b", bs)
 
     # print(bs)
     # # W = np.random.randint(-10, 10, (10, 3))
@@ -154,6 +174,11 @@ if __name__ == "__main__":
     Z = np.max(all, axis=0)
     # print(Z.shape)
     surf = ax.plot_surface(X, Y, Z, cmap=cm.coolwarm,
+                                linewidth=0, antialiased=False)
+    
+
+    fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
+    surf = ax.plot_surface(X, Y, Z1 - Z, cmap=cm.coolwarm,
                                 linewidth=0, antialiased=False)
 
     # Customize the z axis.
