@@ -100,34 +100,3 @@ class SwitchSystem:
 class Positive(Condition):
     def evaluate(self, x) -> bool:
         return x[0] > 0
-    
-
-
-A_1 = np.array([[0, 0], [0, 1]])
-B_1 = np.array([[1, 0], [0, 1]])
-
-A_2 = np.array([[-1, 0], [0, -1]])
-B_2 = np.array([[1, 0], [0, 1]])
-
-
-hyperplane = HyperPlane(np.array([1, -1]).T, 0)
-
-
-env = SwitchSystem(
-    linear_systems=[
-        LinearSystem(A_1, B_1),
-        LinearSystem(A_2, B_2, condition=hyperplane)
-    ],
-    x = np.array([0, 1])
-)
-
-
-if __name__ == "__main__":
-
-
-    for _ in range(10):
-        res = env.step(u=np.array([0, 1]))
-        print(res)
-
-
-    
