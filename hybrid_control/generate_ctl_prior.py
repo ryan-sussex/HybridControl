@@ -47,7 +47,7 @@ def generate_prior(W, r, x_init, lr, n_steps, threshold, z):
     for i in range(n_steps):
         
         # add threshold
-        if softmax(x_hist[-1])[z] > threshold:
+        if softmax( W @ x_hist[-1] + r)[z] > threshold: # what if z > num x_states?
             return x_hist
         
         a = np.dot(W, x) + r
@@ -67,13 +67,13 @@ def generate_prior(W, r, x_init, lr, n_steps, threshold, z):
     
     return x_hist
 
-'''
-# 2 states
+
+
 W = np.array([[-0.1823255 , -0.32050078],
               [-0.94378347,  0.24966832]])
 r = np.array([0.06502312, 0.46049296])
 
-lr = 0.1
+lr = 1
 n_steps = 10000
 threshold = 0.9
 x_init = np.array([-10,10]) # initialise x
@@ -84,8 +84,6 @@ plt.plot(x_hist)
 plt.show()
 
 # check whether this makes sense as the max x 
-print(softmax(x_init))
-print(softmax(x_hist[-1]))
+print('init x' , softmax(W @ x_init + r))
+print('final x', softmax(W @ x_hist[-1] + r))
   
-
-'''
