@@ -4,11 +4,11 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 
 from ssm import LDS, SLDS
-from library import (
+from examples.library import (
     get_linearly_seperated_env,
     get_three_region_env
 )
-from utils import *
+from examples.utils import *
 
 
 def system_identification(
@@ -90,8 +90,6 @@ if __name__ == "__main__":
         varitional_iter=N_ITER
     )
 
-
-
     xhat = results["q"].mean_continuous_states[0]
     zhat = results["rslds"].most_likely_states(xhat, results["obs"])
 
@@ -113,7 +111,7 @@ if __name__ == "__main__":
         ax=None
     )
 
-    plt.show()#
+    plt.show()
 
 
 

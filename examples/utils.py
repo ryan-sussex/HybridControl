@@ -107,8 +107,6 @@ def plot_phases(Ws, rs, ax=None, linestyle=None):
         ax.plot(x, y, linestyle=linestyle)
 
 
-
-
 def add_derivatives(data):
     v = np.diff(data, axis=0)
     # a = np.diff(data, axis=0, n=2)
