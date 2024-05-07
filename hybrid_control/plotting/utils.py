@@ -1,18 +1,13 @@
 from typing import List
-import gym
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-from tqdm import tqdm
 
-from environments import env, hyperplane
 
 color_names = ["windows blue", "red", "amber", "faded green"]
 colors = sns.xkcd_palette(color_names)
 sns.set_style("white")
 sns.set_context("talk")
-
-from ssm import LDS, SLDS
 
 
 def plot_trajectory(z, x, ax=None, ls="-"):
@@ -99,20 +94,17 @@ def plot_most_likely_dynamics(
     return ax
 
 
-def plot_phases(Ws, rs, ax=None):
+def plot_phases(Ws, rs, ax=None, linestyle=None):
     if ax is None:
         fig = plt.figure(figsize=(6,6))
         ax = fig.add_subplot(111)
 
-    min_ = min(rs)
-    max_ = max(rs)
+    min_ = -10
+    max_ = 10
     x = np.linspace(min_, max_, 100)
-    for i in range(len(Ws)-1):
+    for i in range(len(Ws)):
         y = rs[i] - Ws[i][0]/Ws[i][1] * x
-        ax.plot(x, y)
-    y = rs[-1] - Ws[-1][0]/Ws[-1][1] * x
-    ax.plot(x, y, linestyle="dotted")
-
+        ax.plot(x, y, linestyle=linestyle)
 
 
 def add_derivatives(data):
@@ -136,114 +128,3 @@ def data_to_array(data: List, actions: List):
     # data = add_derivatives(data)
     # data = np.hstack((data, actions[:data.shape[0]]))
     return data
-
-if __name__ == "__main__":
-    # env = gym.make("MountainCar-v0", render_mode="human")
-    # env.action_space.seed(42)
-    STEPS = 1000
-    ITERS = 100
-
-    data = []
-    actions = []
-    observation, info = env.reset(seed=42)
-
-    action = p_0()
-
-    for i in tqdm(range(STEPS)):
-
-        observation, reward, terminated, truncated, info = env.step(action)
-        # if terminated or truncated:
-        #     observation, info = env.reset()
-        
-        data.append(observation)
-        actions.append(action)
-        if i > 5:
-            obs = data_to_array(data, actions)
-            # action += np.random.normal(loc=0, scale=1)
-            action = policy(env, obs, t=i)
-        
-        if observation.dot(observation) > 50:
-            env.reset()
-
-    env.close()
-
-
-    data = obs
-    y = data
-    D_obs = data.shape[1]  # Data dimension
-    # D_latent = 4  # Latent dimension
-    D_latent = D_obs  # Latent dimension
-
-    K = 2  # Number of components
-
-    # Fit SLDS
-    rslds = SLDS(
-        D_obs,
-        K,
-        D_latent,
-        transitions="recurrent_only",
-        dynamics="diagonal_gaussian",
-        emissions="gaussian_id",
-        single_subspace=True,
-    )
-
-    rslds.initialize(y)
-    q_elbos, q = rslds.fit(
-        y,
-        method="laplace_em",
-        variational_posterior="structured_meanfield",
-        initialize=False,
-        num_iters=ITERS,
-        alpha=0.0,
-    )
-    xhat = q.mean_continuous_states[0]
-    zhat = rslds.most_likely_states(xhat, y)
-
-    Ws, Rs, rs = rslds.transitions.params
-    for i in range(len(Ws)):
-        print("w", Rs[i])
-        print("b", rs[i])
-
-    Rs = np.vstack([Rs, hyperplane.c])
-    rs = np.hstack([rs, hyperplane.d])
-
-    
-    # def get_region()
-
-
-    
-    # plt.figure(figsize=(6, 6))
-    # ax1 = plt.subplot(131)
-    plot_phases(Rs, rs)
-
-
-
-    # Plots
-    # original
-    plt.figure(figsize=(6, 6))
-    ax1 = plt.subplot(131)
-    #position
-    plot_original(data, ax=ax1)
-    # vel
-    # plt.figure(figsize=(6, 6))
-    # ax2 = plt.subplot(131)
-    # plot_original(data[:, 2:], ax=ax2)
-    # # acc
-    # plt.figure(figsize=(6, 6))
-    # ax3 = plt.subplot(131)
-    # plot_original(data[:, 2:], ax=ax3)
-
-
-    plt.figure(figsize=(6, 6))
-    ax4 = plt.subplot(131)
-    plot_trajectory(zhat, xhat, ax=ax4)
-    plt.title("Inferred, Laplace-EM")
-
-    plt.figure(figsize=(6, 6))
-    ax = plt.subplot(111)
-    lim = abs(xhat).max(axis=0) + 1
-    plot_most_likely_dynamics(
-        rslds, xlim=(-lim[0], lim[0]), ylim=(-lim[1], lim[1]), ax=ax
-    )
-    plt.title("Most Likely Dynamics, Laplace-EM")
-    plt.show()

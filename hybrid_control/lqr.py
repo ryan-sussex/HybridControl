@@ -28,22 +28,6 @@ class LinearController:
         self.S_ih = None
         self.Ks = None
 
-    @staticmethod
-    def get_basis_vecs(c):
-        """
-        Find basis for the plane
-        """
-        n_dims = c.shape[0]
-        std_basis = np.eye(n_dims)
-        c = c / (c @ c)
-        basis = [c]
-        for i in range(n_dims - 1):
-            vec = project(std_basis[i], basis[i])
-            vec = vec / (vec @ vec)
-            basis.append(vec)
-            # assert np.abs(vec @ c) < .01
-        return basis
-
     def infinite_horizon(self, x):
         if self.S_ih is None:
             S = solve_discrete_are(self.A, self.B, self.Q, self.R)
@@ -117,12 +101,8 @@ def backwards_riccati(A, B, Q, R, S):
     )
 
 
-def project(u, v):
-    return u - (u @ v) / (v @ v) * v
-
 def instantaneous_cost(x, u, Q, R):
     return x.T @ Q @ x + u.T @ R @ u
-
 
 
 if __name__ == "__main__":
