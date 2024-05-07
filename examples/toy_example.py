@@ -4,7 +4,10 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 
 from ssm import LDS, SLDS
-from library import get_linearly_seperated_env
+from library import (
+    get_linearly_seperated_env,
+    get_three_region_env
+)
 from utils import *
 
 
@@ -74,15 +77,15 @@ def system_identification(
 if __name__ == "__main__":
     # env = gym.make("MountainCar-v0", render_mode="human")
     # env.action_space.seed(42)
-    K = 2
+    # env = get_linearly_seperated_env()
+    env = get_three_region_env()
+    K = len(env.linear_systems)
     N_ITER = 100
     N_STEPS = 100
-    env = get_linearly_seperated_env()
-
 
     results = system_identification(
         env, 
-        k_components=2, 
+        k_components=K, 
         env_steps=N_STEPS, 
         varitional_iter=N_ITER
     )
@@ -92,22 +95,22 @@ if __name__ == "__main__":
     xhat = results["q"].mean_continuous_states[0]
     zhat = results["rslds"].most_likely_states(xhat, results["obs"])
 
-    Ws, Rs, rs = results["rslds"].transitions.params
-    for i in range(len(Ws)):
-        print("w", Rs[i])
-        print("b", rs[i])
-
-    true_hplane = env.linear_systems[0]
-    Rs = np.vstack([Rs, env.linear_systems[0].w])
-    rs = np.hstack([rs, env.linear_systems[0].b])
-    Rs = np.vstack([Rs, env.linear_systems[1].w])
-    rs = np.hstack([rs, env.linear_systems[1].b])
-
+    _, Rs, rs = results["rslds"].transitions.params
     plot_phases(Rs, rs)
+    
+    Ws = np.block([[linear.w] for linear in env.linear_systems])
+    bs = np.block([linear.b for linear in env.linear_systems])
+
+    print("w", Ws)
+
+    plot_phases(Ws, bs, ax=plt.gca(), linestyle="dotted")
 
     lim = abs(xhat).max(axis=0) + 1
     plot_most_likely_dynamics(
-        results["rslds"], xlim=(-lim[0], lim[0]), ylim=(-lim[1], lim[1]), ax=None
+        results["rslds"], 
+        xlim=(-lim[0], lim[0]), 
+        ylim=(-lim[1], lim[1]), 
+        ax=None
     )
 
     plt.show()#

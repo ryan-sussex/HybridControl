@@ -79,10 +79,23 @@ def get_basis_vecs(c):
 
 
 if __name__ == "__main__":
+    import matplotlib.pyplot as plt
+    from examples.utils import plot_phases
+    from examples.library import get_three_region_env
 
-    W = np.random.randint(-10, 10, (10, 3))
-    b = np.random.randint(-10, 10, (10, 1))
+    env = get_three_region_env()
+    
+    Ws = np.block([[linear.w] for linear in env.linear_systems])
+    bs = np.block([linear.b for linear in env.linear_systems])
 
-    A = extract_adjacency(W, b)
+    plot_phases(Ws, bs)
+    plt.show()
+
+
+
+    # W = np.random.randint(-10, 10, (10, 3))
+    # b = np.random.randint(-10, 10, (10, 1))
+
+    A = extract_adjacency(Ws, bs)
 
     print(A)

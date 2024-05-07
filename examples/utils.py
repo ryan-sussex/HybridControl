@@ -94,19 +94,18 @@ def plot_most_likely_dynamics(
     return ax
 
 
-def plot_phases(Ws, rs, ax=None):
+def plot_phases(Ws, rs, ax=None, linestyle=None):
     if ax is None:
         fig = plt.figure(figsize=(6,6))
         ax = fig.add_subplot(111)
 
-    min_ = min(rs)
-    max_ = max(rs)
+    min_ = -10
+    max_ = 10
     x = np.linspace(min_, max_, 100)
-    for i in range(len(Ws)-1):
+    for i in range(len(Ws)):
         y = rs[i] - Ws[i][0]/Ws[i][1] * x
-        ax.plot(x, y)
-    y = rs[-1] - Ws[-1][0]/Ws[-1][1] * x
-    ax.plot(x, y, linestyle="dotted")
+        ax.plot(x, y, linestyle=linestyle)
+
 
 
 
