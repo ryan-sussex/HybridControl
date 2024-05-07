@@ -6,6 +6,7 @@ from scipy.optimize import linprog
 
 logger = logging.getLogger()
 
+
 def extract_adjacency(W: np.ndarray, b: np.ndarray) -> np.ndarray:
     """
     Creates and adjacency matrix from the logistic regression parameters
@@ -28,7 +29,7 @@ def extract_adjacency(W: np.ndarray, b: np.ndarray) -> np.ndarray:
 def get_polytope_rep(W: np.ndarray, b: np.ndarray, i):
     """
     Considering softmax(Wx + b)
-    
+
     For a given i (discrete region), finds the system of inequalities
         W_ x <= b_
     governing the region for which i is active, (largest in the softmax)
@@ -51,15 +52,24 @@ def check_for_redundancy(W, b):
         res = linprog(-W[i], A_ub=W, b_ub=b, bounds=(None, None))
         if res["status"] == 0:
             # print(np.abs(res["fun"] - b[i]).sum())
-            is_redundant = (np.abs(res["fun"] + b[i]).sum() > 0.1)
-            logger.info(f"..linear program constraint check found j={str(i)}, redundant {is_redundant}")
+            is_redundant = np.abs(res["fun"] + b[i]).sum() > 0.1
+            logger.info(
+                "..linear program constraint check found j={str(i)},"
+                f"redundant {is_redundant}"
+            )
             redundant.append(is_redundant)
         elif res["status"] == 3:
-            logger.info(f"..linear program constraint check is unbounded for j={str(i)}")
+            logger.info(
+                "..linear program constraint check "
+                f"is unbounded for j={str(i)}"
+            )
             redundant.append(False)
         else:
             status = res["status"]
-            logger.info(f"..Linear program constraint check failed for node j={str(i)} with code {status}")
+            logger.info(
+                "..Linear program constraint check failed"
+                f"for node j={str(i)} with code {status}"
+            )
             redundant.append(True)
     return redundant
 
@@ -93,73 +103,3 @@ def get_basis_vecs(c):
         vec = vec / (vec @ vec)
         basis.append(vec)
     return basis
-
-
-if __name__ == "__main__":
-
-    logging.basicConfig(level=logging.INFO)
-
-    import matplotlib.pyplot as plt
-    from plotting.utils import plot_phases
-    from environments.library import get_three_region_env, get_linearly_seperated_env
-    from matplotlib import cm
-    from matplotlib.ticker import LinearLocator
-
-    env = get_three_region_env(0, 0, 5)
-    
-
-    Ws = np.block([[linear.w] for linear in env.linear_systems])
-    bs = np.block([linear.b for linear in env.linear_systems])
-
-
-    A = extract_adjacency(Ws, bs)
-    print(A)
-
-
-
-    # Make data.
-    X = np.arange(-10, 10, 0.25)
-    Y = np.arange(-10, 10, 0.25)
-    X, Y = np.meshgrid(X, Y)
-    print(X[0][0])
-    # Z = np.sin(R)
-
-    fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
-    # Plot the surface.
-    Z1 = Ws[0][0] * X  + Ws[0][1] * Y + bs[0]
-    surf = ax.plot_surface(X, Y, Z1, cmap=cm.coolwarm,
-                        linewidth=0, antialiased=False)
-
-    Z2 = Ws[1][0] * X  + Ws[1][1] * Y +  bs[1]
-    surf = ax.plot_surface(X, Y, Z2, cmap=cm.coolwarm,
-                            linewidth=0, antialiased=False)
-    
-    Z3 = Ws[2][0] * X  + Ws[2][1] * Y +  bs[2]
-    surf = ax.plot_surface(X, Y, Z3, cmap=cm.coolwarm,
-                                linewidth=0, antialiased=False)
-    
-
-
-    fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
-
-    all = np.stack([Z1, Z2, Z3])
-    Z = np.max(all, axis=0)
-    # print(Z.shape)
-    surf = ax.plot_surface(X, Y, Z, cmap=cm.coolwarm,
-                                linewidth=0, antialiased=False)
-    
-
-    fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
-    surf = ax.plot_surface(X, Y, Z1 - Z, cmap=cm.coolwarm,
-                                linewidth=0, antialiased=False)
-
-    # Customize the z axis.
-    ax.set_zlim(-10, 10)
-    ax.zaxis.set_major_locator(LinearLocator(10))
-    # A StrMethodFormatter is used automatically
-    ax.zaxis.set_major_formatter('{x:.02f}')
-
-    # Add a color bar which maps values to colors.
-    fig.colorbar(surf, shrink=0.5, aspect=5)
-
-    plt.show()
