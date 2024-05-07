@@ -101,8 +101,14 @@ def backwards_riccati(A, B, Q, R, S):
     )
 
 
-if __name__ == "__main__":
+def instantaneous_cost(x, u, Q, R):
+    return x.T @ Q @ x + u.T @ R @ u
 
+
+if __name__ == "__main__":
+    
+    T = 100 
+    
     A = np.array([[-.1, .1], [.2, .1]])
     B = np.array([[1, 2], [0.1, 3]])
 
@@ -116,20 +122,24 @@ if __name__ == "__main__":
    
     lc = LinearController(A, B, Q, R)
     lc = convert_to_servo(lc, x_ref)
-
-
+    
+    accum_cost = 0
 
     # Simulate system    
     x = x_0
     x_bar = np.r_[x - x_ref, 1] # internal coords
     traj = [x]
-    for t in range(100):
-        u = lc.finite_horizon(x_bar, t=t, T=100)
+    for t in range(T):
+        u = lc.finite_horizon(x_bar, t=t, T=T)
+        accum_cost += x.T @ Q @ x + u.T @ R @ u
         x = A @ x + B @ u + np.random.normal([0, 0], scale=0.2)
         x_bar = np.r_[x - x_ref, 1] # translate to internal coords
         traj.append(x)
     
     X = np.column_stack(traj)
+    
+    av_cost = accum_cost / T
+    print('average control cost', av_cost)
 
 
     # Plots
