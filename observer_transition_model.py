@@ -120,7 +120,8 @@ def create_B(adj, mode_action_names, num_states):
     for i in range(T.shape[1]):
         for j in range(T.shape[0]): # T.shape[0] should be len of columns
             if np.array_equal(B[0][:,j,i], np.zeros(T.shape[1])):
-                B[0][:,j,i] = adj[:,j]/np.sum(adj[:,j], axis=0) # without control cost 
+                # B[0][:,j,i] = adj[:,j]/np.sum(adj[:,j], axis=0) 
+                B[0][:,j,i] = adj[j,:]/np.sum(adj[j,:], axis=0) # without control cost 
                 # B[0][:,j,i] = T[:,j]/np.sum(T[:,j], axis=0) # for cc stuff
     
     return B
