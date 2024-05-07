@@ -97,52 +97,24 @@ def get_basis_vecs(c):
 
 if __name__ == "__main__":
 
-    # W = np.array(
-    #     [
-    #         [ 1],
-    #         [-1]
-    #     ]
-    # )
-    # b = np.array([5, 5])
-
-    # res = linprog(-W[1], A_ub=W, b_ub=b, method="simplex")
-
-    # print(res)
-    # # print("slack", res.slack)
-    # raise
-
-
-
-
     logging.basicConfig(level=logging.INFO)
 
     import matplotlib.pyplot as plt
-    from examples.utils import plot_phases
-    from examples.library import get_three_region_env, get_linearly_seperated_env
+    from plotting.utils import plot_phases
+    from environments.library import get_three_region_env, get_linearly_seperated_env
+    from matplotlib import cm
+    from matplotlib.ticker import LinearLocator
 
     env = get_three_region_env(0, 0, 5)
     
-    # env = get_linearly_seperated_env()
 
     Ws = np.block([[linear.w] for linear in env.linear_systems])
     bs = np.block([linear.b for linear in env.linear_systems])
 
-    # print(bs)
-    # # W = np.random.randint(-10, 10, (10, 3))
-    # # b = np.random.randint(-10, 10, (10, 1))
 
     A = extract_adjacency(Ws, bs)
     print(A)
 
-    # raise
-    # plot_phases(Ws, bs)
-    # plt.show()
-
-    # import matplotlib.pyplot as plt
-    # import numpy as np
-
-    from matplotlib import cm
-    from matplotlib.ticker import LinearLocator
 
 
     # Make data.

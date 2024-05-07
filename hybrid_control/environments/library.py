@@ -1,6 +1,6 @@
 import numpy as np
 
-from examples.environments import SwitchSystem, LinearSystem
+from hybrid_control.environments.constructor import SwitchSystem, LinearSystem
 
 
 

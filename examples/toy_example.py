@@ -4,11 +4,11 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 
 from ssm import LDS, SLDS
-from examples.library import (
+from hybrid_control.environments.library import (
     get_linearly_seperated_env,
     get_three_region_env
 )
-from examples.utils import *
+from hybrid_control.plotting.utils import *
 
 
 def system_identification(
