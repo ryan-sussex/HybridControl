@@ -44,7 +44,7 @@ def check_for_redundancy(W, b):
     for i in range(len(W)):
         res = linprog(W[i], A_ub=W, b_ub=b)
         if res["status"] == 0:
-            is_redundant = (np.abs(res["fun"] - b[i]).sum() > 0.001)
+            is_redundant = (np.abs(res["fun"] - b[i]).sum() > 0.1)
             logger.info(f"..linear program constraint check found {str(i)}, redundant {is_redundant}")
             redundant.append(is_redundant)
         elif res["status"] == 3:
