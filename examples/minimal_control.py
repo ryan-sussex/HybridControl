@@ -6,6 +6,7 @@ from hybrid_control.algebra import extract_adjacency
 from hybrid_control import observer_transition_model as otm
 from hybrid_control.logisitc_reg import mode_posterior
 from hybrid_control.generate_ctl_prior import generate_all_priors
+from hybrid_control.lqr import LinearController, convert_to_servo
 
 
 logging.basicConfig(level=logging.INFO)
@@ -22,8 +23,11 @@ def p_0():
     return np.random.normal(np.array([0,0]), .1)
 
 
+# def get_linear_component():
+
+
 if __name__ == "__main__":
-    ENV_STEPS = 10
+    ENV_STEPS = 1000
 
     env = get_three_region_env(0, 0, 5)
     W = np.block([[linear.w] for linear in env.linear_systems])
@@ -45,11 +49,36 @@ if __name__ == "__main__":
 
     action = p_0()
 
+    traj = []
     for i in range(ENV_STEPS):
         observation, reward, terminated, truncated, info = env.step(action)
-        print("observation", observation)
+        traj.append(observation)
+        
         probs = mode_posterior(observation, W, b)
-        probs = np.eye(len(probs))[np.argmax(probs)]   
-        agent, discrete_action = otm.step_active_inf_agent(agent,  probs)
-        control_prior(discrete_action)
+        idx_mode = np.argmax(probs)
+        mode = np.eye(len(probs))[idx_mode]   
+
+        agent, discrete_action = otm.step_active_inf_agent(agent,  mode)
+        cts_prior = priors[discrete_action]
+
+        active_linear = env.linear_systems[idx_mode]
+
+        lc = LinearController(
+            active_linear.A,
+            active_linear.B,
+            Q=np.eye(active_linear.A.shape[0])*100,
+            R=np.eye(active_linear.B.shape[1])
+        )
+        lc = convert_to_servo(lc, cts_prior)
+
+        x_bar = np.r_[observation - cts_prior, 1] # internal coords
+
+        # print(observation)
+        action = lc.finite_horizon(x_bar, t=0, T=100)
+
+
+    prob_hist = [mode_posterior(x, W, b) for x in traj]
+    print(prob_hist)
+
+        # control_prior(discrete_action)
         # discrete -> cts action

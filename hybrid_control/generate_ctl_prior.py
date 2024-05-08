@@ -99,28 +99,3 @@ def generate_all_priors(
         prior = opt_hist[-1]
         priors.append(prior)
     return priors
-
-
-
-
-
-
-# W = np.array([[-0.1823255, -0.32050078], [-0.94378347, 0.24966832]])
-# r = np.array([0.06502312, 0.46049296])
-
-# lr = 1
-# n_steps = 10000
-# threshold = 0.9
-# x_init = np.array([-10, 10])  # initialise x
-
-# x_hist = generate_prior(W=W, r=r, x_init=x_init, z=0, lr=lr, n_steps=n_steps, threshold=threshold)
-
-# print(x_hist)
-# print(type(x_hist))
-
-# plt.plot(x_hist)
-# plt.show()
-
-# # check whether this makes sense as the max x
-# print("init x", softmax(W @ x_init + r))
-# print("final x", softmax(W @ x_hist[-1] + r))

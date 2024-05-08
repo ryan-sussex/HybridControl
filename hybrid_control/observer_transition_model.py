@@ -211,7 +211,7 @@ def construct_agent(adj: np.ndarray) -> Agent:
     B = create_B(adj, mode_action_names, num_states)
     # create prior preferences
 
-    rew_idx = 2  # TODO: replace, index of the rewarding observation
+    rew_idx = 1  # TODO: replace, index of the rewarding observation
     C = create_C(num_obs, rew_idx, pun=-5, reward=5)
 
     agent = Agent(

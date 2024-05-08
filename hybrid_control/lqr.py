@@ -131,7 +131,7 @@ if __name__ == "__main__":
     traj = [x]
     for t in range(T):
         u = lc.finite_horizon(x_bar, t=t, T=T)
-        accum_cost += x.T @ Q @ x + u.T @ R @ u
+        accum_cost += instantaneous_cost(x_bar, u, Q, R)
         x = A @ x + B @ u + np.random.normal([0, 0], scale=0.2)
         x_bar = np.r_[x - x_ref, 1] # translate to internal coords
         traj.append(x)
