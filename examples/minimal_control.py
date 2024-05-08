@@ -3,11 +3,6 @@ from typing import List
 import numpy as np
 
 from hybrid_control.environments.library import get_three_region_env
-from hybrid_control.algebra import extract_adjacency
-from hybrid_control import observer_transition_model as otm
-from hybrid_control.logisitc_reg import mode_posterior
-from hybrid_control.generate_ctl_prior import generate_all_priors
-from hybrid_control.lqr import LinearController, convert_to_servo
 from hybrid_control.controller import Controller
 
 logging.basicConfig(level=logging.INFO)
