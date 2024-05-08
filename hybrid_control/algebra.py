@@ -40,13 +40,11 @@ def get_polytope_rep(W: np.ndarray, b: np.ndarray, i):
     b = np.delete(b, (i), axis=0)
     W_ = W - w_mode
     b_ = b_mode - b
-    print(W_, b_)
     return W_, b_
 
 
 def check_for_redundancy(W, b):
     redundant = []
-    print("b", b)
     for i in range(len(W)):
         # -ve because lingprog minimises, we need max
         res = linprog(-W[i], A_ub=W, b_ub=b, bounds=(None, None))
