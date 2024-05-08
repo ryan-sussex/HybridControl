@@ -23,15 +23,23 @@ def p_0():
     return np.random.normal(np.array([0,0]), .1)
 
 
-# def get_linear_component():
+def estimated_system_params(env):
+    """
+    Warning! Passed env for simulation, real model does not have access 
+    """
+    W = np.block([[linear.w] for linear in env.linear_systems])
+    b = np.block([linear.b for linear in env.linear_systems])
+    As = [linear.A for linear in env.linear_systems]
+    Bs = [linear.B for linear in env.linear_systems]
+    return W, b, As, Bs
 
 
 if __name__ == "__main__":
-    ENV_STEPS = 1000
+    ENV_STEPS = 10
 
     env = get_three_region_env(0, 0, 5)
-    W = np.block([[linear.w] for linear in env.linear_systems])
-    b = np.block([linear.b for linear in env.linear_systems])
+
+    W, b, As, Bs = estimated_system_params(env)
 
     priors = generate_all_priors(W, b)
     print(priors)
@@ -54,6 +62,7 @@ if __name__ == "__main__":
         observation, reward, terminated, truncated, info = env.step(action)
         traj.append(observation)
         
+        # controller logic
         probs = mode_posterior(observation, W, b)
         idx_mode = np.argmax(probs)
         mode = np.eye(len(probs))[idx_mode]   
@@ -64,8 +73,8 @@ if __name__ == "__main__":
         active_linear = env.linear_systems[idx_mode]
 
         lc = LinearController(
-            active_linear.A,
-            active_linear.B,
+            As[idx_mode],
+            Bs[idx_mode],
             Q=np.eye(active_linear.A.shape[0])*100,
             R=np.eye(active_linear.B.shape[1])
         )
@@ -78,7 +87,3 @@ if __name__ == "__main__":
 
 
     prob_hist = [mode_posterior(x, W, b) for x in traj]
-    print(prob_hist)
-
-        # control_prior(discrete_action)
-        # discrete -> cts action
