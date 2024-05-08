@@ -1,26 +1,50 @@
+import logging
 import numpy as np
 
 from hybrid_control.environments.library import get_three_region_env
 from hybrid_control.algebra import extract_adjacency
-import hybrid_control.observer_transition_model
+from hybrid_control import observer_transition_model as otm
+from hybrid_control.logisitc_reg import mode_posterior
+
+logging.basicConfig(level=logging.INFO)
+
+
+
+def control_prior(discrete_action):
+    """
+    Takes discrete action, maps to cts point, use lqr to generate cts action
+    """
+    pass
+
+def p_0():
+    return np.random.normal(np.array([0,0]), .1)
 
 
 if __name__ == "__main__":
+    ENV_STEPS = 10
 
     env = get_three_region_env(0, 0, 5)
-    Ws = np.block([[linear.w] for linear in env.linear_systems])
-    bs = np.block([linear.b for linear in env.linear_systems])
+    W = np.block([[linear.w] for linear in env.linear_systems])
+    b = np.block([linear.b for linear in env.linear_systems])
 
-    A = extract_adjacency(Ws, bs)
-    # get adjacency matrix
+    adj = extract_adjacency(W, b)
+    print(adj)
 
-    # Question: use adjacency or pymdp rep
-    # get obs transition matrix
+    agent = otm.construct_agent(adj)
+    print(agent.B[0][:, :, 0])
 
+    # TODO: 
+    # get central points for discrete modes ()
+    # calculate costs between modes
+    # lift reward to pymdp agent
 
-    #
+    action = p_0()
 
-    # get central points for modes
-
-
-    # control cost for each transition - each direction
+    for i in range(ENV_STEPS):
+        observation, reward, terminated, truncated, info = env.step(action)
+        print("observation", observation)
+        probs = mode_posterior(observation, W, b)
+        probs = np.eye(len(probs))[np.argmax(probs)]   
+        agent, discrete_action = otm.step_active_inf_agent(agent,  probs)
+        control_prior(discrete_action)
+        # discrete -> cts action
