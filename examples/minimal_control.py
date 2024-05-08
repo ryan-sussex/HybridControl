@@ -8,13 +8,6 @@ from hybrid_control.controller import Controller
 logging.basicConfig(level=logging.INFO)
 
 
-def control_prior(discrete_action):
-    """
-    Takes discrete action, maps to cts point, use lqr to generate cts action
-    """
-    pass
-
-
 def p_0():
     return np.random.normal(np.array([0, 0]), 0.1)
 
