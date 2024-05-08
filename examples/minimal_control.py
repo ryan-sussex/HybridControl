@@ -37,7 +37,7 @@ if __name__ == "__main__":
 
     controller = Controller(As=As, Bs=Bs, W=W, b=b)
 
-    action = p_0()
+    action = p_0(env)
 
     traj = []
     for i in range(ENV_STEPS):
