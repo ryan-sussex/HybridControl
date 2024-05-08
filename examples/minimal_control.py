@@ -10,7 +10,7 @@ logging.basicConfig(level=logging.INFO)
 
 def p_0(env):
     obs_dim = env.linear_systems[0].A.shape[0]
-    return np.random.normal(obs_dim, 0.1)
+    return np.random.normal(np.zeros(obs_dim), 0.1)
 
 
 def estimated_system_params(env):
