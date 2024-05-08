@@ -40,7 +40,6 @@ def get_polytope_rep(W: np.ndarray, b: np.ndarray, i):
     b = np.delete(b, (i), axis=0)
     W_ = W - w_mode
     b_ = b_mode - b
-    print(W_, b_)
     return W_, b_
 
 

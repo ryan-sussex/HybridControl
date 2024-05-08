@@ -1,2 +1,4 @@
 gym[classic_control]
 scipy
+networkx
+# pymdp -sparse likelihoods

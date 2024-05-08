@@ -22,7 +22,6 @@ from scipy.stats import entropy
 import random
 import networkx as nx
 
-from algebra import * 
 
 def construct_graph():
 
@@ -164,67 +163,69 @@ def control_cost_prior(adj, control_cost=None):
         return None
     return cc
 
+if __name__ == "__main__":
 
-# %% CONSTRUCT AGENT
+    from hybrid_control.algebra import * 
+    # %% CONSTRUCT AGENT
 
-# create transition model
-# adj = construct_graph() # create adjacency matrix
+    # create transition model
+    # adj = construct_graph() # create adjacency matrix
 
-W = np.random.randint(-10, 10, (3, 2))
-b = np.random.randint(-10, 10, (3, 1))
-adj = extract_adjacency(W, b)
-draw_graph(adj)
+    W = np.random.randint(-10, 10, (3, 2))
+    b = np.random.randint(-10, 10, (3, 1))
+    adj = extract_adjacency(W, b)
+    draw_graph(adj)
 
-# state
-state_modes = [f'{i}' for i in range(adj.shape[0])]
-num_states = [len(state_modes)]
-num_factors = len(num_states)
+    # state
+    state_modes = [f'{i}' for i in range(adj.shape[0])]
+    num_states = [len(state_modes)]
+    num_factors = len(num_states)
 
-# observations
-obs_modes = [f'{i}' for i in range(adj.shape[0])]
-num_obs = [len(obs_modes)]
-num_modalities = len(num_obs)
+    # observations
+    obs_modes = [f'{i}' for i in range(adj.shape[0])]
+    num_obs = [len(obs_modes)]
+    num_modalities = len(num_obs)
 
-# actions
-mode_action_names = [f'Go-{i}' for i in range(adj.shape[0])]
-num_controls = [len(mode_action_names)]
+    # actions
+    mode_action_names = [f'Go-{i}' for i in range(adj.shape[0])]
+    num_controls = [len(mode_action_names)]
 
-# create observation likelihood
-A = create_A(num_obs, num_states, state_modes, obs_modes)
+    # create observation likelihood
+    A = create_A(num_obs, num_states, state_modes, obs_modes)
 
-B = create_B(adj, mode_action_names, num_states)
+    B = create_B(adj, mode_action_names, num_states)
 
-temp = B[0]
+    temp = B[0]
 
-# create prior preferences
-rew_idx = 2 # index of the rewarding observation
-C = create_C(num_obs, rew_idx, pun=-5,reward=5) 
-
-
-# construct active inference agent
-my_agent = Agent(A=A, B=B, C=C, policy_len=4, policies=None, B_factor_list=None, action_selection="deterministic")
+    # create prior preferences
+    rew_idx = 2 # index of the rewarding observation
+    C = create_C(num_obs, rew_idx, pun=-5,reward=5) 
 
 
-# In[] RUN ACTIVE INFERENCE LOOP
+    # construct active inference agent
+    my_agent = Agent(A=A, B=B, C=C, policy_len=4, policies=None, B_factor_list=None, action_selection="deterministic")
 
-my_agent.reset() # resets qs and q_pi to uniform
-    
-init_obs = [1, 0, 0]
-qs = my_agent.infer_states(init_obs)
-    
-q_pi, efe = my_agent.infer_policies()
-    
-chosen_action_id = my_agent.sample_action()
-    
-movement_id = int(chosen_action_id[0]) # because context action is always 'do-nothing'
-choice_action = mode_action_names[movement_id] # just for recording purposes
-print(choice_action)
-    
-# # step the environment then infer state again so that the dirichlet parameters can properly update
-# obs_label = my_env.step(choice_action)
-# obs = [reward_obs_names.index(obs_label[0])]
-# qs = my_agent.infer_states(obs)
-# if learning:
-#     qA = my_agent.update_A(obs)
-# print(obs_label[0], my_agent.qs[0], choice_action, q_pi)
+
+    # In[] RUN ACTIVE INFERENCE LOOP
+
+    my_agent.reset() # resets qs and q_pi to uniform
+        
+    init_obs = [1, 0, 0]
+    qs = my_agent.infer_states(init_obs)
+        
+    q_pi, efe = my_agent.infer_policies()
+        
+    chosen_action_id = my_agent.sample_action()
+        
+    movement_id = int(chosen_action_id[0]) # because context action is always 'do-nothing'
+    choice_action = mode_action_names[movement_id] # just for recording purposes
+    print(choice_action)
+        
+    # # step the environment then infer state again so that the dirichlet parameters can properly update
+    # obs_label = my_env.step(choice_action)
+    # obs = [reward_obs_names.index(obs_label[0])]
+    # qs = my_agent.infer_states(obs)
+    # if learning:
+    #     qA = my_agent.update_A(obs)
+    # print(obs_label[0], my_agent.qs[0], choice_action, q_pi)
 
