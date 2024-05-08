@@ -5,9 +5,10 @@ from hybrid_control.environments.library import get_three_region_env
 from hybrid_control.algebra import extract_adjacency
 from hybrid_control import observer_transition_model as otm
 from hybrid_control.logisitc_reg import mode_posterior
+from hybrid_control.generate_ctl_prior import generate_all_priors
+
 
 logging.basicConfig(level=logging.INFO)
-
 
 
 def control_prior(discrete_action):
@@ -15,6 +16,7 @@ def control_prior(discrete_action):
     Takes discrete action, maps to cts point, use lqr to generate cts action
     """
     pass
+
 
 def p_0():
     return np.random.normal(np.array([0,0]), .1)
@@ -26,6 +28,9 @@ if __name__ == "__main__":
     env = get_three_region_env(0, 0, 5)
     W = np.block([[linear.w] for linear in env.linear_systems])
     b = np.block([linear.b for linear in env.linear_systems])
+
+    priors = generate_all_priors(W, b)
+    print(priors)
 
     adj = extract_adjacency(W, b)
     print(adj)
