@@ -3,8 +3,6 @@
 """
 Created on Mon May  6 11:57:24 2024
 
-Need to make sure I have my T.shape stuff the right way around...
-
 @author: pzc
 """
 import logging
@@ -153,43 +151,13 @@ def create_B(adj, mode_action_names, num_states):
     return B
 
 
-def create_C(num_obs, rew_idx, pun=-5.0, reward=5):
+def create_C(num_obs, rew_idx, pun=0, reward=5):
     """create prior preference over mode observations"""
 
     C = utils.obj_array_zeros(num_obs)
-
-    C[0] = np.zeros(num_obs[0])
-    C[0] + pun
+    C[0][:] = pun
     C[0][rew_idx] = reward
     return C[0]
-
-
-def control_cost_prior(adj, control_cost=None):
-    """
-    returns some control cost matrix as unnorm probs
-    (when the control cost is close to 0, it is less likely)
-
-    # Also I think I should be adding this at G not in transition likelihoods...
-    # Also should av control cost of self loop be centre to border?
-    """
-
-    if control_cost == None:
-        # for now just have random control costs...
-        random_costs = np.random.rand(3, 3) * 1000
-
-        costs_norm = random_costs / np.sum(random_costs, axis=1)
-
-        costs = 1 - costs_norm
-
-        cc = adj * costs
-
-        # set all diagonals to 1s as these will have no cost
-        cc = cc * (1 - np.eye(cc.shape[0])) + np.eye(cc.shape[0])
-
-    else:
-        return None
-    return cc
-
 
 def construct_agent(adj: np.ndarray) -> Agent:
     # state
@@ -209,6 +177,7 @@ def construct_agent(adj: np.ndarray) -> Agent:
     # create observation likelihood
     A = create_A(num_obs, num_states, state_modes, obs_modes)
     B = create_B(adj, mode_action_names, num_states)
+    pB = utils.dirichlet_like(B,scale=1)
     # create prior preferences
 
     rew_idx = 1  # TODO: replace, index of the rewarding observation
@@ -217,14 +186,17 @@ def construct_agent(adj: np.ndarray) -> Agent:
     agent = Agent(
         A=A,
         B=B,
+        pB=pB,
         C=C,
-        policy_len=4,
+        policy_len=3,
         policies=None,
         B_factor_list=None,
         action_selection="deterministic",
     )
 
     agent.mode_action_names = mode_action_names
+    
+    
 
     return agent
 
@@ -278,7 +250,7 @@ if __name__ == "__main__":
     A = create_A(num_obs, num_states, state_modes, obs_modes)
 
     B = create_B(adj, mode_action_names, num_states)
-
+    pB = utils.dirichlet_like(B,scale=1)
     # temp = B[0]
 
     # create prior preferences
@@ -289,13 +261,13 @@ if __name__ == "__main__":
     my_agent = Agent(
         A=A,
         B=B,
+        pB=pB,
         C=C,
         policy_len=4,
         policies=None,
         B_factor_list=None,
         action_selection="deterministic",
     )
-
 
     # In[] RUN ACTIVE INFERENCE LOOP
     my_agent.reset()  # resets qs and q_pi to uniform
