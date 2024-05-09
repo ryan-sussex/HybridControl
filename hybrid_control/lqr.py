@@ -100,10 +100,35 @@ def backwards_riccati(A, B, Q, R, S):
         Q + A.T @ S @ A - (A.T @ S @ B) @ np.linalg.pinv(R + B.T @ S @ B) @ B.T @ S @ A
     )
 
-
 def instantaneous_cost(x, u, Q, R):
     return x.T @ Q @ x + u.T @ R @ u
 
+def get_trajectory_cost(A, B, Q, R, x_0, x_ref):
+    
+    T = 100 
+   
+    lc = LinearController(A, B, Q, R)
+    lc = convert_to_servo(lc, x_ref)
+    
+    accum_cost = 0
+
+    # Simulate system    
+    x = x_0
+    x_bar = np.r_[x - x_ref, 1] # internal coords
+    traj = [x]
+    for t in range(T):
+        u = lc.finite_horizon(x_bar, t=t, T=T)
+        accum_cost += instantaneous_cost(x_bar, u, lc.Q, lc.R)
+        x = A @ x + B @ u + np.random.normal([0, 0], scale=0.2)
+        x_bar = np.r_[x - x_ref, 1] # translate to internal coords
+        traj.append(x)
+    
+    X = np.column_stack(traj)
+    
+    # av_cost = accum_cost / T
+    
+    return accum_cost
+    
 
 if __name__ == "__main__":
     
