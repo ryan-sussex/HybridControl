@@ -15,6 +15,11 @@ from tqdm import tqdm
 logging.basicConfig(level=logging.INFO)
 
 
+def p_0(env):
+    obs_dim = env.linear_systems[0].A.shape[0]
+    return np.random.normal(np.zeros(obs_dim), 0.1)
+
+
 def system_identification(
         env,
         k_components: int,
@@ -26,7 +31,7 @@ def system_identification(
     actions = []
     observation, info = env.reset(seed=42)
 
-    action = initial_policy()
+    action = initial_policy(env)
 
     for i in tqdm(range(env_steps)):
         observation, reward, terminated, truncated, info = env.step(action)
@@ -52,6 +57,7 @@ def system_identification(
         D_obs,
         k_components,
         D_latent,
+        M=2,    # Control dim
         transitions="recurrent_only",
         dynamics="diagonal_gaussian",
         emissions="gaussian_id",
@@ -80,12 +86,6 @@ def system_identification(
 
 
 
-
-def p_0(env):
-    obs_dim = env.linear_systems[0].A.shape[0]
-    return np.random.normal(np.zeros(obs_dim), 0.1)
-
-
 def estimated_system_params(rslds: SLDS, env):
     """
     Warning! Passed env for simulation, real model does not have access
@@ -100,7 +100,7 @@ def estimated_system_params(rslds: SLDS, env):
     # W = np.block([[linear.w] for linear in env.linear_systems])
     # b = np.block([linear.b for linear in env.linear_systems])
     # As = [linear.A for linear in env.linear_systems]
-    Bs = [linear.B for linear in env.linear_systems]
+    # Bs = [linear.B for linear in env.linear_systems]
     return W, b, As, Bs
 
 
@@ -123,9 +123,8 @@ if __name__ == "__main__":
 
     W, b, As, Bs = estimated_system_params(results["rslds"], env)
 
-    # TODO:
-    # calculate costs between modes
-    # lift reward to pymdp agent
+    # TODO: calculate costs between modes
+    # TODO: lift reward to pymdp agent
 
     controller = Controller(As=As, Bs=Bs, W=W, b=b)
 
