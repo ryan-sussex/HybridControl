@@ -33,20 +33,42 @@ def estimated_system_params(env):
 
 
 def get_cost_matrix(adj, priors, As, Bs, Q, R):
+    '''
+    Parameters
+    ----------
+    adj : array
+        adjacency matrix.
+    priors : list of arrays
+        control priors for each discrete mode.
+    As : list of arrays
+        system parameter A matrices.
+    Bs : list of arrays
+        system parameter B matrices.
+    Q : array
+        state cost matrix for LQR controller
+    R : array
+        control cost matrix for LQR controller
+
+    Returns
+    -------
+    costs_matrix : array
+        adjacency matrix weighted by costs of each transition.
+
+    '''
     
-    costs = adj.copy()
+    costs_matrix = adj.copy()
     
-    for i in range(adj.shape[1]):
-        for j in range(adj.shape[0]):
+    for i in range(costs_matrix.shape[1]):
+        for j in range(costs_matrix.shape[0]):
             if bool(adj[i,j]): # if transition allowed
                 x_0 =  priors[j]
                 x_ref = priors[i]
-                costs[i,j] = get_trajectory_cost(As[j], Bs[j], Q, R, x_0, x_ref)
+                costs_matrix[i,j] = get_trajectory_cost(As[j], Bs[j], Q, R, x_0, x_ref)
                 
     # make negative
-    costs = costs * -1 
+    costs_matrix = costs_matrix * -1 
                 
-    return costs
+    return costs_matrix
 
 
 def get_random_cost_matrix(adj):
@@ -81,8 +103,20 @@ def get_random_cost_matrix(adj):
 
 def sample_path(B, policy, init_state):
     '''
-        Implements MCMC sampling of the transition matrix to give a sequence 
-        of states under a policy (sequence of actions)
+    Parameters
+    ----------
+    B : array
+        Agent's discrete transition matrix.
+    policy : array
+        Sequence of actions.
+    init_state : int
+        Initial discrete mode.
+
+    Returns
+    -------
+    trajectory : array
+        Sequence of sampled states given a sequence of actions (policy).
+
     '''
     current_state = init_state
     
@@ -101,40 +135,86 @@ def sample_path(B, policy, init_state):
 
 def cost_per_path(cost_matrix, path):
     '''
-        Calculates the cost of an individual path (sequence of states under a policy) 
-        by using the cost_matrix
+    Parameters
+    ----------
+    cost_matrix : array
+        adjacency matrix weighted by control cost.
+    path : array
+        Sequence of sampled states given a policy.
+
+    Returns
+    -------
+    cost : float
+        cost of an individual path (sequence of states under a policy).
+
     '''
     cost = []
     for i in range(len(path)-1):
         # current_state = path[i], next_state = path[i+1]
         # index costs by [i, i+1]
         cost.append(cost_matrix[path[i], path[i+1]])
+    
+    cost = sum(cost)
         
     return cost
 
 def cost_per_policy(B, cost_matrix, policy, init_state):
     '''
-        Calculates the total cost of a particular policy by averaging multiple 
-        possible paths 
+    Parameters
+    ----------
+    B : array
+        Agent's discrete transition matrix.
+    cost_matrix : array
+        adjacency matrix weighted by costs of each transition.
+    policy : array
+       Sequence of actions.
+    init_state : int
+        Initial discrete mode.
+
+    Returns
+    -------
+    policy_cost : float
+        Total cost of a particular policy (by averaging multiple 
+        possible paths).
+
     '''
     # sample a number of paths per policy and take average
     n_samples = 10
-    total_cost = []
+    costs = []
     for i in range(n_samples):
         # simulate a trajectory
         path = sample_path(B, policy, init_state)
         # get cost of trajectory
-        total_cost.append(cost_per_path(cost_matrix, path))
+        costs.append(cost_per_path(cost_matrix, path))
     
     # average over 
-    policy_cost = np.sum(total_cost)/n_samples
+    policy_cost = sum(costs)/n_samples
     
     return policy_cost
 
 def get_prior_over_policies(agent, cost_matrix, idx_mode, alpha):
-
+    
+    '''
+    Parameters
+    ----------
+    agent : object
+        pymdp agent.
+    cost_matrix : array
+        adjacency matrix weighted by costs of each transition.
+    idx_mode : int
+        Initial discrete mode.
+    alpha : float
+        1/Temperature for softmax function
+    
+    Returns
+    -------
+    P_pi : array
+        Probability distribution over policies weighted by their control cost
+    '''
+    
     # get control costs for each policy by indexing i for current state, j for policy action
     pi_costs = np.zeros(len(agent.policies),)
+    
     for i in range(len(agent.policies)):
         policy_i = np.squeeze(agent.policies[i])
         pi_costs[i] = cost_per_policy(agent.B, cost_matrix, policy=policy_i, init_state=idx_mode)
