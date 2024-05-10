@@ -43,6 +43,9 @@ def get_cost_matrix(adj, priors, As, Bs, Q, R):
                 x_ref = priors[i]
                 costs[i,j] = get_trajectory_cost(As[j], Bs[j], Q, R, x_0, x_ref)
                 
+    # make negative
+    costs = costs * -1 
+                
     return costs
 
 
@@ -104,8 +107,8 @@ def cost_per_path(cost_matrix, path):
     cost = []
     for i in range(len(path)-1):
         # current_state = path[i], next_state = path[i+1]
-        # index random_costs by [i, i+1]
-        cost.append(random_costs[path[i], path[i+1]])
+        # index costs by [i, i+1]
+        cost.append(cost_matrix[path[i], path[i+1]])
         
     return cost
 
@@ -128,6 +131,20 @@ def cost_per_policy(B, cost_matrix, policy, init_state):
     
     return policy_cost
 
+def get_prior_over_policies(agent, cost_matrix, idx_mode, alpha):
+
+    # get control costs for each policy by indexing i for current state, j for policy action
+    pi_costs = np.zeros(len(agent.policies),)
+    for i in range(len(agent.policies)):
+        policy_i = np.squeeze(agent.policies[i])
+        pi_costs[i] = cost_per_policy(agent.B, cost_matrix, policy=policy_i, init_state=idx_mode)
+    
+    # softmax with temperature parameter (alpha = 1/T)
+    P_pi = sm(pi_costs*alpha)
+    
+    return P_pi
+    
+
 if __name__ == "__main__":
     
     import matplotlib.pyplot as plt
@@ -147,7 +164,6 @@ if __name__ == "__main__":
     agent = otm.construct_agent(adj)
     print(agent.B[0][:, :, 0])
     
-    # using adj matrix, all priors, agent.policies and initial mode
     
     # 1. get the initial state of the system
     action = p_0()
@@ -156,32 +172,19 @@ if __name__ == "__main__":
     idx_mode = np.argmax(probs)
     mode = np.eye(len(probs))[idx_mode]
     
-    # 2. create cost adj matrix  
-    #get closed form solution for cost?
+    # 2. create cost weighted adjancency matrix  
     cost_matrix = get_cost_matrix(adj, 
                                   priors, 
                                   As, 
                                   Bs,
-                                  Q=np.eye(As[idx_mode].shape[0])*100,
-                                  R=np.eye(Bs[idx_mode].shape[1]))
+                                  Q=np.eye(As[0].shape[0])*100,
+                                  R=np.eye(Bs[0].shape[1]))
     
-    random_costs = get_random_cost_matrix(adj) # for now just get random costs
+    # random_costs = get_random_cost_matrix(adj) # alternatively just get random costs
   
-    # 3. get costs for each policy
-    # alpha = 0.001
-    alpha = 0.0001
-    # get control costs for each policy by indexing i for current state, j for policy action
-    pi_costs = np.zeros(len(agent.policies),)
-    for i in range(len(agent.policies)):
-        policy = np.squeeze(agent.policies[i])
-        pi_costs[i] = cost_per_policy(agent.B, cost_matrix=random_costs, policy=policy, init_state=idx_mode)
-    
-    P_pi = sm(pi_costs*alpha)
-    
-    # 4. set agent.E to the softmaxed control costs
-    agent.E = P_pi
-    # sm(p*0.0001) probably need a very low alpha (high temp)
+    # set agents prior over policies to the softmaxed control costs
+    agent.E = get_prior_over_policies(agent, cost_matrix, idx_mode, alpha = 0.0001)
+
     plt.plot(agent.E)
-   
+    plt.show()
     
-    # lift reward to pymdp agent
