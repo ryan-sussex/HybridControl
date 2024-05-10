@@ -244,27 +244,59 @@ if __name__ == "__main__":
     agent = otm.construct_agent(adj)
     print(agent.B[0][:, :, 0])
     
-    
-    # 1. get the initial state of the system
     action = p_0()
-    observation, reward, terminated, truncated, info = env.step(action)
-    probs = mode_posterior(observation, W, b)
-    idx_mode = np.argmax(probs)
-    mode = np.eye(len(probs))[idx_mode]
     
-    # 2. create cost weighted adjancency matrix  
-    cost_matrix = get_cost_matrix(adj, 
-                                  priors, 
-                                  As, 
-                                  Bs,
-                                  Q=np.eye(As[0].shape[0])*100,
-                                  R=np.eye(Bs[0].shape[1]))
-    
-    # random_costs = get_random_cost_matrix(adj) # alternatively just get random costs
-  
-    # set agents prior over policies to the softmaxed control costs
-    agent.E = get_prior_over_policies(agent, cost_matrix, idx_mode, alpha = 0.0001)
+    traj = []
+    for i in range(ENV_STEPS):
+        observation, reward, terminated, truncated, info = env.step(action)
+        traj.append(observation)
+        
+        # controller logic
+        probs = mode_posterior(observation, W, b)
+        idx_mode = np.argmax(probs)
+        mode = np.eye(len(probs))[idx_mode]   
+        
+        if i == 0: # only need do this once
+        
+            # create cost weighted adjancency matrix  
+            cost_matrix = get_cost_matrix(adj, 
+                                          priors, 
+                                          As, 
+                                          Bs,
+                                          Q=np.eye(As[0].shape[0])*100,
+                                          R=np.eye(Bs[0].shape[1]))
+            # alternatively just get random costs
+            # random_costs = get_random_cost_matrix(adj) 
+        
+        # set agents prior over policies to the softmaxed control costs
+        agent.E = get_prior_over_policies(agent, cost_matrix, idx_mode, alpha = 0.0001)
+        plt.plot(agent.E)
+        plt.show()
+        
+        agent, discrete_action = otm.step_active_inf_agent(agent,  mode)
+        cts_prior = priors[discrete_action]
 
-    plt.plot(agent.E)
-    plt.show()
+        active_linear = env.linear_systems[idx_mode]
+
+        lc = LinearController(
+            As[idx_mode],
+            Bs[idx_mode],
+            Q=np.eye(active_linear.A.shape[0])*100,
+            R=np.eye(active_linear.B.shape[1])
+        )
+        lc = convert_to_servo(lc, cts_prior)
+
+        x_bar = np.r_[observation - cts_prior, 1] # internal coords
+
+        # print(observation)
+        action = lc.finite_horizon(x_bar, t=0, T=100)
+
+
+    prob_hist = [mode_posterior(x, W, b) for x in traj]
+    
+    
+    
+    
+
+   
     
