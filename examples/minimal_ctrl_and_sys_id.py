@@ -94,14 +94,10 @@ def estimated_system_params(rslds: SLDS, env):
     emission_params = rslds.emissions.params
     softmax_params = rslds.transitions.params
 
-    _, W, b = softmax_params
+    W_u, W_x, b = softmax_params
     As, bs, Bs, Sigmas = dynamic_params
-
-    # W = np.block([[linear.w] for linear in env.linear_systems])
-    # b = np.block([linear.b for linear in env.linear_systems])
-    # As = [linear.A for linear in env.linear_systems]
-    # Bs = [linear.B for linear in env.linear_systems]
-    return W, b, As, Bs
+    # TODO: bias term for linear ctrlrs, and extra weight for inputs
+    return W_x, b, As, Bs
 
 
 if __name__ == "__main__":
@@ -136,3 +132,5 @@ if __name__ == "__main__":
         traj.append(observation)
 
         action = controller.policy(observation)
+    
+    print([np.argmax(controller.mode_posterior(x)) for x in traj])
