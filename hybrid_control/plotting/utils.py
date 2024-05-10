@@ -127,4 +127,4 @@ def data_to_array(data: List, actions: List):
     actions = np.stack(actions)
     # data = add_derivatives(data)
     # data = np.hstack((data, actions[:data.shape[0]]))
-    return data
+    return data, actions
