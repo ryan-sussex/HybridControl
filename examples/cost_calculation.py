@@ -32,17 +32,16 @@ def estimated_system_params(env):
     return W, b, As, Bs
 
 
-def get_cost_matrix(adj, priors, A, B, Q, R):
+def get_cost_matrix(adj, priors, As, Bs, Q, R):
     
     costs = adj.copy()
     
     for i in range(adj.shape[1]):
         for j in range(adj.shape[0]):
             if bool(adj[i,j]): # if transition allowed
-                active_linear = env.linear_systems[i]
-                x_0 =  priors[i]
-                x_ref = priors[j]
-                costs[i,j] = get_trajectory_cost(A,B, Q, R, x_0, x_ref)
+                x_0 =  priors[j]
+                x_ref = priors[i]
+                costs[i,j] = get_trajectory_cost(As[j], Bs[j], Q, R, x_0, x_ref)
                 
     return costs
 
@@ -161,20 +160,22 @@ if __name__ == "__main__":
     #get closed form solution for cost?
     cost_matrix = get_cost_matrix(adj, 
                                   priors, 
-                                  As[idx_mode], 
-                                  Bs[idx_mode],
+                                  As, 
+                                  Bs,
                                   Q=np.eye(As[idx_mode].shape[0])*100,
                                   R=np.eye(Bs[idx_mode].shape[1]))
     
     random_costs = get_random_cost_matrix(adj) # for now just get random costs
   
     # 3. get costs for each policy
-    alpha = 0.001
+    # alpha = 0.001
+    alpha = 0.0001
     # get control costs for each policy by indexing i for current state, j for policy action
     pi_costs = np.zeros(len(agent.policies),)
     for i in range(len(agent.policies)):
         policy = np.squeeze(agent.policies[i])
         pi_costs[i] = cost_per_policy(agent.B, cost_matrix=random_costs, policy=policy, init_state=idx_mode)
+    
     P_pi = sm(pi_costs*alpha)
     
     # 4. set agent.E to the softmaxed control costs
