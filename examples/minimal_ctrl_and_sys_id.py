@@ -133,4 +133,13 @@ if __name__ == "__main__":
 
         action = controller.policy(observation)
     
-    print([np.argmax(controller.mode_posterior(x)) for x in traj])
+    print("model", [np.argmax(controller.mode_posterior(x)) for x in traj])
+
+
+    from hybrid_control.logisitc_reg import mode_posterior
+
+
+    # gt 
+    W = np.block([[linear.w] for linear in env.linear_systems])
+    b = np.block([linear.b for linear in env.linear_systems])
+    print("gt", [np.argmax(mode_posterior(x, W, b)) for x in traj])
