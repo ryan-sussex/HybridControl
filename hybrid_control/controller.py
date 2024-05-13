@@ -39,12 +39,9 @@ class Controller:
         return mode_posterior(observation, self.W, self.b)
 
     def policy(self, observation, init_step):
-        
-        from pymdp.utils import obj_array_zeros
-        """
+                """
         Takes a continuous observation, outputs continuous action.
         """
-        self.agent.C = obj_array_zeros([3])
         probs = self.mode_posterior(observation)
         idx_mode = np.argmax(probs)
         mode = np.eye(len(probs))[idx_mode]  # one-hot rep
