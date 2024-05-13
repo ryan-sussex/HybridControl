@@ -97,6 +97,7 @@ def estimated_system_params(rslds: SLDS, env):
     W_u, W_x, b = softmax_params
     As, bs, Bs, Sigmas = dynamic_params
     # TODO: bias term for linear ctrlrs, and extra weight for inputs
+    # Workout exactly what Sigmas are
     return W_x, b, As, Bs
 
 
@@ -124,7 +125,7 @@ if __name__ == "__main__":
 
     controller = Controller(As=As, Bs=Bs, W=W, b=b)
 
-    action = p_0(env)
+    action = controller.policy()
 
     traj = []
     for i in range(ENV_STEPS):
@@ -133,12 +134,15 @@ if __name__ == "__main__":
 
         action = controller.policy(observation)
     
+
+
+
+
+    print("Trajectory", traj)
     print("model", [np.argmax(controller.mode_posterior(x)) for x in traj])
 
 
     from hybrid_control.logisitc_reg import mode_posterior
-
-
     # gt 
     W = np.block([[linear.w] for linear in env.linear_systems])
     b = np.block([linear.b for linear in env.linear_systems])

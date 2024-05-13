@@ -23,7 +23,7 @@ import random
 import networkx as nx
 
 
-logger = logging.getLogger()
+logger = logging.getLogger("discrete_controller")
 
 
 def construct_graph():

@@ -4,7 +4,8 @@ import numpy as np
 from scipy.linalg import null_space
 from scipy.optimize import linprog
 
-logger = logging.getLogger()
+
+logger = logging.getLogger("linear_algebra")
 
 
 def extract_adjacency(W: np.ndarray, b: np.ndarray) -> np.ndarray:

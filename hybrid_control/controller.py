@@ -1,5 +1,5 @@
 import logging
-from typing import List
+from typing import List, Optional
 import numpy as np
 
 from hybrid_control.algebra import extract_adjacency
@@ -9,8 +9,7 @@ from hybrid_control.generate_ctl_prior import generate_all_priors
 from hybrid_control.lqr import LinearController, convert_to_servo
 
 
-logging.basicConfig(level=logging.INFO)
-
+logger = logging.getLogger("controller")
 
 
 class Controller:
@@ -28,18 +27,24 @@ class Controller:
         self.cts_ctrs = get_all_cts_controllers(As, Bs, self.mode_priors)
         self.W = W
         self.b = b
+        self.action_dim = Bs[0].shape[1]
 
     def mode_posterior(self, observation):
         return mode_posterior(observation, self.W, self.b)
 
-
-    def policy(self, observation):
+    def policy(self, observation: Optional[np.ndarray] = None):
         """
         Takes a continuous observation, outputs continuous action.
         """
+        if observation is None:
+            logger.info("No observation, returning default action.")
+            return self.p_0(self.action_dim)
+
         probs = self.mode_posterior(observation)
         idx_mode = np.argmax(probs)
         mode = np.eye(len(probs))[idx_mode]  # one-hot rep
+        logger.debug(f"Inferred mode {mode}")
+
         # Discrete 
         self.agent, discrete_action = otm\
             .step_active_inf_agent(self.agent, mode)
@@ -49,6 +54,13 @@ class Controller:
         x_bar = np.r_[observation - cts_prior, 1]  # internal coords TODO: simplify this
         action = cts_ctr.finite_horizon(x_bar, t=0, T=100)  # TODO: magic numbers
         return action
+
+    @staticmethod
+    def p_0(action_dim: int):
+        """
+        Default action before observations recieved.
+        """
+        return np.random.normal(np.zeros(action_dim), 0.1)
 
 
 def get_discrete_controller(W, b):
