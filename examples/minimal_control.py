@@ -45,4 +45,4 @@ if __name__ == "__main__":
         observation, reward, terminated, truncated, info = env.step(action)
         traj.append(observation)
 
-        action = controller.policy(observation)
+        action = controller.policy(observation, action)

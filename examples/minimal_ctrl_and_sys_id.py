@@ -132,7 +132,7 @@ if __name__ == "__main__":
         obs.append(observation)
         actions.append(action)
 
-        action = controller.policy(observation)
+        action = controller.policy(observation, action)
 
         if i == 5:
             controller = controller.estimate_and_identify(np.stack(obs), np.stack(actions))    
@@ -143,5 +143,5 @@ if __name__ == "__main__":
     W = np.block([[linear.w] for linear in env.linear_systems])
     b = np.block([linear.b for linear in env.linear_systems])
     print("Trajectory", obs)
-    print("model", [np.argmax(controller.mode_posterior(x)) for x in obs])
-    print("gt", [np.argmax(mode_posterior(x, W, b)) for x in obs])
+    print("model", [np.argmax(controller.mode_posterior(x, u)) for x, u in zip(obs, actions)])
+    print("gt", [np.argmax(mode_posterior(x, u, W_x, W_u, b)) for x, u in zip(obs, actions)])

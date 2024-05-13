@@ -50,6 +50,7 @@ class Controller:
         self.agent = get_discrete_controller(W_x, b)
         self.cts_ctrs = get_all_cts_controllers(As, Bs, self.mode_priors)
         self.W_x = W_x
+        self.W_u = W_u
         self.b = b
 
         self.adj = extract_adjacency(W_x, b)
@@ -58,13 +59,23 @@ class Controller:
             self.mode_priors,
             As,
             Bs,
-            **get_default_lqr_costs(self.obs_dim, self.action_dim)
+            **get_default_lqr_costs(self.obs_dim, self.action_dim),
         )
 
-    def mode_posterior(self, observation):
-        return mode_posterior(observation, self.W_x, self.b)
+    def mode_posterior(self, observation, action: Optional[np.ndarray] = None):
+        if action is None:
+            logger.warning(
+                "Recieved None, for action.. ..setting action to zeros, "
+                "note this may lead to inaccurate inference."
+            )
+            action = np.zeros(self.action_dim)
+        return mode_posterior(observation, action, self.W_x, self.W_u, self.b)
 
-    def policy(self, observation: Optional[np.ndarray] = None):
+    def policy(
+            self,
+            observation: Optional[np.ndarray] = None,
+            action: Optional[np.ndarray] = None,
+    ):
         """
         Takes a continuous observation, outputs continuous action.
         """
@@ -72,14 +83,14 @@ class Controller:
             logger.info("No observation, returning default action.")
             return self.p_0(self.action_dim)
 
-        probs = self.mode_posterior(observation)
+        probs = self.mode_posterior(observation, action)
         idx_mode = np.argmax(probs)
         mode = np.eye(len(probs))[idx_mode]  # one-hot rep
         logger.debug(f"Inferred mode {mode}")
 
         # Discrete
         self.agent.E = get_prior_over_policies(
-            self.agent, self.cost_matrix, idx_mode, alpha=0.0001    # TODO: magic number
+            self.agent, self.cost_matrix, idx_mode, alpha=0.0001  # TODO: magic number
         )
         self.agent, discrete_action = otm.step_active_inf_agent(self.agent, mode)
         cts_prior = self.mode_priors[discrete_action]
@@ -100,7 +111,8 @@ class Controller:
     def estimate(self, obs, actions, **kwargs):
         logger.info("re-estimation..")
         rslds = _estimate(
-            obs, actions, self.obs_dim, self.action_dim, self.n_modes, **kwargs)
+            obs, actions, self.obs_dim, self.action_dim, self.n_modes, **kwargs
+        )
         return estimated_system_params(rslds)
 
     def estimate_and_identify(cls, obs, actions, **kwargs):
@@ -156,9 +168,7 @@ def estimated_system_params(rslds: SLDS):
     As, bs, Bs, Sigmas = dynamic_params
     # TODO: bias term for linear ctrlrs, and extra weight for inputs
     # Workout exactly what Sigmas are
-    return dict(
-        W_u=W_u, W_x=W_x, b=b, As=As, Bs=Bs, bs=bs
-    )
+    return dict(W_u=W_u, W_x=W_x, b=b, As=As, Bs=Bs, bs=bs)
 
 
 def _estimate(obs, actions, d_obs, d_actions, k_components, n_iters: int = 100) -> SLDS:
