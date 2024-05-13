@@ -27,16 +27,21 @@ class LinearController:
         c=None,
         d=None,
         v=None,
+        x_ref=None,
     ) -> None:
-        self.A = A
-        self.B = B
-        self.Q = Q
-        self.R = R
+        # self.A = A
+        # self.B = B
+        # self.Q = Q
+        # self.R = R
         self.b = b
         if b is None:
             self.b = np.zeros(A.shape[0])
         
         self.A, self.B, self.Q, self.R = create_biased_matrices(A, B, Q, R, self.b)
+        
+        if x_ref is None:
+            self.x_ref = np.zeros(A.shape[0])
+
         self.c = c
         self.d = d
         self.v = v
@@ -45,7 +50,7 @@ class LinearController:
         self.Ks = None
 
     def infinite_horizon(self, x):
-        x_bar = np.r_[x - self.b, 1]  # internal coords
+        x_bar = np.r_[x - self.x_ref, 1]  # internal coords
 
         if self.S_ih is None:
             S = solve_discrete_are(self.A, self.B, self.Q, self.R)
@@ -55,8 +60,7 @@ class LinearController:
         return -K @ x_bar
 
     def finite_horizon(self, x, t, T):
-        print("bias", x-self.b)
-        x_bar = np.r_[x - self.b, 1]  # internal coords
+        x_bar = np.r_[x - x_ref, 1]  # internal coords
 
         if self.Ks is not None:
             if t >= T:
@@ -74,11 +78,22 @@ class LinearController:
         return self.finite_horizon(x, t, T)
 
     def instantaneous_cost(self, x, u):
-        x_bar = np.r_[x - self.b, 1]  # internal coords
+        x_bar = np.r_[x - self.x_ref, 1]  # internal coords
         return x_bar.T @ self.Q @ x_bar + u.T @ self.R @ u
 
 
 def create_biased_matrices(A: np.ndarray, B: np.ndarray, Q, R, bias: np.ndarray):
+    """
+    Translates the linear system to the affine system in (x-x_ref) coords
+        z = [x + b, 1]
+        z = Az + Bu
+
+    Where
+        A <- [A, b; 0, 1]
+        B <- [B, 0]
+
+    and Q is transported to the point x_ref.
+    """
     A_shape = A.shape
     B_shape = B.shape
 
@@ -91,7 +106,6 @@ def create_biased_matrices(A: np.ndarray, B: np.ndarray, Q, R, bias: np.ndarray)
 
     Q_out = np.zeros(A.shape)
     Q_out[: Q.shape[0], : Q.shape[1]] = Q
-    print("q_out", Q_out.shape)
     return A, B, Q_out, R
 
 
@@ -111,8 +125,9 @@ def convert_to_servo(linear_controller: LinearController, x_ref) -> LinearContro
     # unbiased dynamics
     A_ub = A[:-1, :-1]
     bias = (A_ub - np.eye(A_ub.shape[0])) @ x_ref
-    A[:-1, -1] -= bias
+    A[:-1, -1] += bias
     linear_controller.A = A
+    linear_controller.x_ref = x_ref
     return linear_controller
 
 
@@ -126,7 +141,7 @@ def backwards_riccati(A, B, Q, R, S):
     )
 
 
-def get_trajectory_cost(A, B, Q, R, x_0, x_ref):
+def get_trajectory_cost(A, B, Q, R, b, x_0, x_ref):
     T = 100
     lc = LinearController(A, B, Q, R)
     lc = convert_to_servo(lc, x_ref)
@@ -137,7 +152,7 @@ def get_trajectory_cost(A, B, Q, R, x_0, x_ref):
     for t in range(T):
         u = lc.finite_horizon(x, t=t, T=T)
         accum_cost += lc.instantaneous_cost(x, u, lc.Q, lc.R)
-        x = A @ x + B @ u + np.random.normal([0, 0], scale=0.2)
+        x = A @ x + B @ u + np.random.normal([0, 0], scale=0.2) - b
         # x_bar = np.r_[x - x_ref, 1]  # translate to internal coords
         traj.append(x)
 
@@ -150,8 +165,8 @@ if __name__ == "__main__":
     T = 100
 
     As = [
-        np.array([[0, 0], [0, 1]]),
-        np.array([[-1., 0], [0, -1]]),
+        np.array([[0, 0], [0, 2]]),
+        np.array([[-1.4, 0], [0, -2]]),
         np.array([[-1, 1], [0, -1]]),
     ]
 
@@ -177,19 +192,20 @@ if __name__ == "__main__":
     lc = LinearController(A, B, Q, R, b=b)
     lc = convert_to_servo(lc, x_ref)
 
+    print(lc.A)
+
     accum_cost = 0
 
     # Simulate system
     x = x_0
-    # x_bar = np.r_[x - x_ref, 1]  # internal coords
     traj = [x]
+
     for t in range(T):
-        print(x.shape)
+        # x_bar = np.r_[x - x_ref]  # translate to internal coords
         u = lc.finite_horizon(x, t=t, T=T)
         accum_cost += lc.instantaneous_cost(x, u)
-        x = A @ x + B @ u + np.random.normal([0, 0], scale=0.2) + b
-        print(x.shape)
-        # x_bar = np.r_[x - x_ref, 1]  # translate to internal coords
+        x = A @ x + B @ u + b
+        # + np.random.normal([0, 0], scale=0.2) + b
         traj.append(x)
 
     X = np.column_stack(traj)
