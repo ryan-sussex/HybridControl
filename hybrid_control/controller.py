@@ -15,12 +15,12 @@ logger = logging.getLogger("controller")
 class Controller:
 
     def __init__(
-            self, 
-            As: List[np.ndarray], 
+            self,
+            As: List[np.ndarray],
             Bs: List[np.ndarray],
-            bs: List[np.ndarray], 
+            bs: List[np.ndarray],
             W_u: np.ndarray,
-            W_x: np.ndarray, 
+            W_x: np.ndarray,
             b: np.ndarray
     ):
         """
@@ -58,10 +58,11 @@ class Controller:
         mode = np.eye(len(probs))[idx_mode]  # one-hot rep
         logger.debug(f"Inferred mode {mode}")
 
-        # Discrete 
+        # Discrete
         self.agent, discrete_action = otm\
             .step_active_inf_agent(self.agent, mode)
         cts_prior = self.mode_priors[discrete_action]
+
         # Continuous
         cts_ctr = self.cts_ctrs[discrete_action][idx_mode]
         x_bar = np.r_[observation - cts_prior, 1]  # internal coords TODO: simplify this
@@ -107,4 +108,3 @@ def get_all_cts_controllers(As, Bs, mode_priors: List):
         ]
         for j in range(n_modes)
     ]
-    

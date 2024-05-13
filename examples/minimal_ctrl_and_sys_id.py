@@ -120,11 +120,8 @@ if __name__ == "__main__":
 
     W_u, W_x, b, As, Bs, bs = estimated_system_params(results["rslds"], env)
 
-    # TODO: calculate costs between modes
-    # TODO: lift reward to pymdp agent
 
     controller = Controller(As=As, Bs=Bs, bs=bs, W_u=W_u, W_x=W_x, b=b)
-
     action = controller.policy()
 
     traj = []
@@ -136,14 +133,10 @@ if __name__ == "__main__":
     
 
 
-
-
-    print("Trajectory", traj)
-    print("model", [np.argmax(controller.mode_posterior(x)) for x in traj])
-
-
+    # Simple report
     from hybrid_control.logisitc_reg import mode_posterior
-    # gt 
     W = np.block([[linear.w] for linear in env.linear_systems])
     b = np.block([linear.b for linear in env.linear_systems])
+    print("Trajectory", traj)
+    print("model", [np.argmax(controller.mode_posterior(x)) for x in traj])
     print("gt", [np.argmax(mode_posterior(x, W, b)) for x in traj])
