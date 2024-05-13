@@ -153,10 +153,12 @@ def create_B(adj, mode_action_names, num_states):
 
 def create_C(num_obs, rew_idx, pun=0, reward=5):
     """create prior preference over mode observations"""
-
-    C = utils.obj_array_zeros(num_obs)
-    C[0][:] = pun
-    C[0][rew_idx] = reward
+    if rew_idx == None:
+        C = utils.obj_array_zeros(num_obs)
+    else:
+        C = utils.obj_array_zeros(num_obs)
+        C[0][:] = pun
+        C[0][rew_idx] = reward
     return C[0]
 
 def construct_agent(adj: np.ndarray) -> Agent:
@@ -180,7 +182,8 @@ def construct_agent(adj: np.ndarray) -> Agent:
     pB = utils.dirichlet_like(B,scale=1)
     # create prior preferences
 
-    rew_idx = 1  # TODO: replace, index of the rewarding observation
+    # rew_idx = 1  # TODO: replace, index of the rewarding observation
+    rew_idx = None
     C = create_C(num_obs, rew_idx, pun=-5, reward=5)
 
     agent = Agent(
@@ -191,22 +194,41 @@ def construct_agent(adj: np.ndarray) -> Agent:
         policy_len=3,
         policies=None,
         B_factor_list=None,
+        use_utility = True, 
+        use_states_info_gain = True,
+        use_param_info_gain = True,
         action_selection="deterministic",
     )
 
     agent.mode_action_names = mode_action_names
     
-    
 
     return agent
 
 
-def step_active_inf_agent(agent: Agent, obs):
+def step_active_inf_agent(agent: Agent, obs, init_step):
     agent.reset()  # resets qs and q_pi to uniform
 
     qs = agent.infer_states(obs, distr_obs=True)
+    
+    if not init_step:
+        agent.qB = agent.update_B(agent.qs_prev)
 
     q_pi, efe = agent.infer_policies()
+    
+    # NOTE: below plot of different components contributing to EFE only works 
+    # with a modification to the pymdp agent class
+    
+    # q_pi, efe, utility, state_ig, param_ig = agent.infer_policies_expand_G()
+
+    
+    # plt.plot(efe, label='efe') 
+    # plt.plot(utility, label='util')
+    # plt.plot(state_ig, label='sig')
+    # plt.plot(param_ig, label='pig')
+    # plt.title('Components of EFE')
+    # plt.legend()
+    # plt.show()
 
     chosen_action_id = agent.sample_action()
 
@@ -215,6 +237,9 @@ def step_active_inf_agent(agent: Agent, obs):
     )  # because context action is always 'do-nothing'
     choice_action = agent.mode_action_names[movement_id]  # just for recording purposes
     logger.info(f"chose action:{choice_action}")
+    
+    agent.qs_prev = qs # for updating pB on next loop 
+    
     return agent, movement_id
 
 

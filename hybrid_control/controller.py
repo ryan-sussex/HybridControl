@@ -26,7 +26,6 @@ class Controller:
         self.b = b
         self.obs_dim = As[0].shape[0]
         self.action_dim = Bs[0].shape[1]
-
         self.adj = extract_adjacency(W, b)
         self.cost_matrix = get_cost_matrix(
             self.adj,
@@ -39,10 +38,13 @@ class Controller:
     def mode_posterior(self, observation):
         return mode_posterior(observation, self.W, self.b)
 
-    def policy(self, observation):
+    def policy(self, observation, init_step):
+        
+        from pymdp.utils import obj_array_zeros
         """
         Takes a continuous observation, outputs continuous action.
         """
+        self.agent.C = obj_array_zeros([3])
         probs = self.mode_posterior(observation)
         idx_mode = np.argmax(probs)
         mode = np.eye(len(probs))[idx_mode]  # one-hot rep
@@ -50,7 +52,7 @@ class Controller:
         self.agent.E = get_prior_over_policies(
             self.agent, self.cost_matrix, idx_mode, alpha=0.0001    # TODO: magic number
         )
-        self.agent, discrete_action = otm.step_active_inf_agent(self.agent, mode)
+        self.agent, discrete_action = otm.step_active_inf_agent(self.agent, mode, init_step)
         cts_prior = self.mode_priors[discrete_action]
         # Continuous
         cts_ctr = self.cts_ctrs[discrete_action][idx_mode]
