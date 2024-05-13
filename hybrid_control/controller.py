@@ -23,6 +23,17 @@ class Controller:
             W_x: np.ndarray, 
             b: np.ndarray
     ):
+        """
+        Parameters
+        -----------
+        As, Bs, bs: List of arrays (each of same shape)
+            The parameters associated to each linear system i.e.
+            x' = A[i] @ x + B[i] @ u + b[i]
+
+        W_u, W_x, b: Arrays with first dim as the number components
+            The parameters for inducing switches i.e.
+            softmax(W_u @ u + W_b @ x + b)
+        """
         self.n_modes = len(As)
         self.mode_priors = generate_all_priors(W_x, b)
         self.agent = get_discrete_controller(W_x, b)
