@@ -125,18 +125,23 @@ if __name__ == "__main__":
     action = controller.policy()
 
     traj = []
+    obs = []
+    actions = []
     for i in range(ENV_STEPS):
         observation, reward, terminated, truncated, info = env.step(action)
-        traj.append(observation)
+        obs.append(observation)
+        actions.append(action)
 
         action = controller.policy(observation)
-    
+
+        if i == 5:
+            controller = controller.estimate_and_identify(np.stack(obs), np.stack(actions))    
 
 
     # Simple report
     from hybrid_control.logisitc_reg import mode_posterior
     W = np.block([[linear.w] for linear in env.linear_systems])
     b = np.block([linear.b for linear in env.linear_systems])
-    print("Trajectory", traj)
-    print("model", [np.argmax(controller.mode_posterior(x)) for x in traj])
-    print("gt", [np.argmax(mode_posterior(x, W, b)) for x in traj])
+    print("Trajectory", obs)
+    print("model", [np.argmax(controller.mode_posterior(x)) for x in obs])
+    print("gt", [np.argmax(mode_posterior(x, W, b)) for x in obs])

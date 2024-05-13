@@ -79,12 +79,13 @@ class Controller:
         return np.random.normal(np.zeros(action_dim), 0.1)
 
     def estimate(self, obs, actions, **kwargs):
-        rslds = _estimate(obs, actions, self.obs_dim, self.action_dim, self.n_modes, **kwargs)
+        rslds = _estimate(
+            obs, actions, self.obs_dim, self.action_dim, self.n_modes, **kwargs)
         return estimated_system_params(rslds)
 
     def estimate_and_identify(cls, obs, actions, **kwargs):
         param_dct = cls.estimate(obs, actions, **kwargs)
-        return cls(**param_dct)
+        return Controller(**param_dct)
 
 
 def get_discrete_controller(W, b):
