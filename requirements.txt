@@ -1,4 +1,6 @@
 gym[classic_control]
 scipy
 networkx
+# optional
+opencv-python
 # pymdp -sparse likelihoods

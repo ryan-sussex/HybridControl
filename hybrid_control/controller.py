@@ -139,8 +139,9 @@ def get_cts_controller(As, Bs, i: int, j: int, mode_priors: List):
     """
     Constructs the controller for traversing region i to reach goal j
     """
+    print(Bs[i].shape)
     lc = LinearController(
-        As[i], Bs[i], **get_default_lqr_costs(As[i].shape[0], Bs[i].shape[0])
+        As[i], Bs[i], **get_default_lqr_costs(As[i].shape[0], Bs[i].shape[1])
     )
     return convert_to_servo(lc, mode_priors[j])
 
