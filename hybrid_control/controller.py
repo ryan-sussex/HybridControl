@@ -50,7 +50,6 @@ class Controller:
         self.agent.E = get_prior_over_policies(
             self.agent, self.cost_matrix, idx_mode, alpha=0.0001    # TODO: magic number
         )
-        print(self.agent.E)
         self.agent, discrete_action = otm.step_active_inf_agent(self.agent, mode)
         cts_prior = self.mode_priors[discrete_action]
         # Continuous
