@@ -17,12 +17,12 @@ logging.basicConfig(level=logging.INFO)
 
 
 if __name__ == "__main__":
-    ENV_STEPS = 200
+    ENV_STEPS = 1000
 
     env = gym.make('MountainCarContinuous-v0', render_mode="human")
     env.reset()
     
-    K = 3  # would be unknown
+    K = 5  # would be unknown
     OBS_DIM = 2
     ACT_DIM = 1
     N_ITER = 100
@@ -44,6 +44,6 @@ if __name__ == "__main__":
 
         action = controller.policy(observation, action)
 
-        if i == 100:
+        if i % 200 == 199:
             controller = controller.estimate_and_identify(np.stack(obs), np.stack(actions))    
     env.close()
