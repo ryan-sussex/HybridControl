@@ -98,7 +98,7 @@ def estimated_system_params(rslds: SLDS, env):
     As, bs, Bs, Sigmas = dynamic_params
     # TODO: bias term for linear ctrlrs, and extra weight for inputs
     # Workout exactly what Sigmas are
-    return W_x, b, As, Bs
+    return W_u, W_x, b, As, Bs, bs
 
 
 if __name__ == "__main__":
@@ -118,12 +118,12 @@ if __name__ == "__main__":
         varitional_iter=N_ITER
     )
 
-    W, b, As, Bs = estimated_system_params(results["rslds"], env)
+    W_u, W_x, b, As, Bs, bs = estimated_system_params(results["rslds"], env)
 
     # TODO: calculate costs between modes
     # TODO: lift reward to pymdp agent
 
-    controller = Controller(As=As, Bs=Bs, W=W, b=b)
+    controller = Controller(As=As, Bs=Bs, bs=bs, W_u=W_u, W_x=W_x, b=b)
 
     action = controller.policy()
 

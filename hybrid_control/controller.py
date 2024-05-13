@@ -17,20 +17,22 @@ class Controller:
     def __init__(
             self, 
             As: List[np.ndarray], 
-            Bs: List[np.ndarray], 
-            W: np.ndarray, 
+            Bs: List[np.ndarray],
+            bs: List[np.ndarray], 
+            W_u: np.ndarray,
+            W_x: np.ndarray, 
             b: np.ndarray
     ):
         self.n_modes = len(As)
-        self.mode_priors = generate_all_priors(W, b)
-        self.agent = get_discrete_controller(W, b)
+        self.mode_priors = generate_all_priors(W_x, b)
+        self.agent = get_discrete_controller(W_x, b)
         self.cts_ctrs = get_all_cts_controllers(As, Bs, self.mode_priors)
-        self.W = W
+        self.W_x = W_x
         self.b = b
         self.action_dim = Bs[0].shape[1]
 
     def mode_posterior(self, observation):
-        return mode_posterior(observation, self.W, self.b)
+        return mode_posterior(observation, self.W_x, self.b)
 
     def policy(self, observation: Optional[np.ndarray] = None):
         """
