@@ -10,8 +10,7 @@ from hybrid_control.controller import Controller, get_initial_controller
 
 from hybrid_control.plotting.utils import *
 
-from tqdm import tqdm
-
+from utils import create_video
 
 logging.basicConfig(level=logging.INFO)
 
@@ -19,7 +18,7 @@ logging.basicConfig(level=logging.INFO)
 if __name__ == "__main__":
     ENV_STEPS = 1000
 
-    env = gym.make('MountainCarContinuous-v0', render_mode="human")
+    env = gym.make('MountainCarContinuous-v0', render_mode="rgb_array")
     env.reset()
     
     K = 5  # would be unknown
@@ -33,9 +32,11 @@ if __name__ == "__main__":
 
     obs = []
     actions = []
+    frames = []
     for i in range(ENV_STEPS):
         observation, reward, terminated, truncated, info = env.step(action)
-        observation, reward, terminated, truncated, info = env.step(action)
+        frames.append(env.render())
+
         if terminated or truncated:
             observation, info = env.reset()
 
@@ -43,7 +44,13 @@ if __name__ == "__main__":
         actions.append(action)
 
         action = controller.policy(observation, action)
-
+        
         if i % 200 == 199:
-            controller = controller.estimate_and_identify(np.stack(obs), np.stack(actions))    
+            create_video(frames, 60, "./video/out")
+            try:
+                controller = controller.estimate_and_identify(np.stack(obs), np.stack(actions))    
+            except Exception:
+                pass
+
+    create_video(frames, 60, "./video/out")
     env.close()
