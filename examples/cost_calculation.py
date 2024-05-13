@@ -192,7 +192,7 @@ def cost_per_policy(B, cost_matrix, policy, init_state):
     
     return policy_cost
 
-def get_prior_over_policies(agent, cost_matrix, idx_mode, alpha):
+def get_prior_over_policies(agent, cost_matrix, idx_mode, alpha=0.0001):
     
     '''
     Parameters
@@ -252,7 +252,7 @@ if __name__ == "__main__":
         traj.append(observation)
         
         # controller logic
-        probs = mode_posterior(observation, W, b)
+        probs = mode_posterior(observation, W, b)   
         idx_mode = np.argmax(probs)
         mode = np.eye(len(probs))[idx_mode]   
         
