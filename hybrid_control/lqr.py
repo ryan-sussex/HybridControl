@@ -157,7 +157,7 @@ def get_trajectory_cost(A, B, Q, R, b, x_0, x_ref):
     for t in range(T):
         u = lc.finite_horizon(x, t=t, T=T)
         accum_cost += lc.instantaneous_cost(x, u)
-        x = A @ x + B @ u + np.random.normal([0, 0], scale=0.2) - b
+        x = A @ x + B @ u + np.random.normal(np.zeros(x.shape), scale=0.2) - b
         traj.append(x)
     return accum_cost
 
