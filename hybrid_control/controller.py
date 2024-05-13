@@ -34,7 +34,7 @@ class Controller:
 
         W_u, W_x, b: Arrays with first dim as the number components
             The parameters for inducing switches i.e.
-            softmax(W_u @ u + W_b @ x + b)
+            softmax(W_u @ u + W_x @ x + b)
         """
         self.n_modes = len(As)
         self.mode_priors = generate_all_priors(W_x, b)
@@ -79,6 +79,7 @@ class Controller:
         return np.random.normal(np.zeros(action_dim), 0.1)
 
     def estimate(self, obs, actions, **kwargs):
+        logger.info("re-estimation..")
         rslds = _estimate(
             obs, actions, self.obs_dim, self.action_dim, self.n_modes, **kwargs)
         return estimated_system_params(rslds)
