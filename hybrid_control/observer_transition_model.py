@@ -6,18 +6,10 @@ Created on Mon May  6 11:57:24 2024
 @author: pzc
 """
 import logging
-import pymdp
 from pymdp import utils
-from pymdp.maths import softmax
 from pymdp.agent import Agent
-from pymdp import learning
-from pymdp.maths import spm_log_single
 import numpy as np
 import matplotlib.pyplot as plt
-import scipy.stats as stats
-from scipy.stats import norm
-from scipy.stats import entropy
-import random
 import networkx as nx
 
 
@@ -153,7 +145,6 @@ def create_B(adj, mode_action_names, num_states):
 
 def create_C(num_obs, rew_idx, pun=0, reward=5):
     """create prior preference over mode observations"""
-
     C = utils.obj_array_zeros(num_obs)
     C[0][:] = pun
     C[0][rew_idx] = reward
@@ -180,7 +171,7 @@ def construct_agent(adj: np.ndarray) -> Agent:
     pB = utils.dirichlet_like(B,scale=1)
     # create prior preferences
 
-    rew_idx = 1  # TODO: replace, index of the rewarding observation
+    rew_idx = 2  # TODO: replace, index of the rewarding observation
     C = create_C(num_obs, rew_idx, pun=-5, reward=5)
 
     agent = Agent(
@@ -190,6 +181,7 @@ def construct_agent(adj: np.ndarray) -> Agent:
         C=C,
         policy_len=3,
         policies=None,
+        use_utility=False,
         B_factor_list=None,
         action_selection="deterministic",
     )
