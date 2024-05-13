@@ -5,21 +5,6 @@ from pymdp.maths import softmax as sm
 from hybrid_control.lqr import get_trajectory_cost
 
 
-def p_0():
-    return np.random.normal(np.array([0, 0]), 0.1)
-
-
-def estimated_system_params(env):
-    """
-    Warning! Passed env for simulation, real model does not have access
-    """
-    W = np.block([[linear.w] for linear in env.linear_systems])
-    b = np.block([linear.b for linear in env.linear_systems])
-    As = [linear.A for linear in env.linear_systems]
-    Bs = [linear.B for linear in env.linear_systems]
-    return W, b, As, Bs
-
-
 def get_cost_matrix(adj, priors, As, Bs, Q, R):
     """
     Parameters
@@ -170,7 +155,7 @@ def cost_per_policy(B, cost_matrix, policy, init_state):
 
     """
     # sample a number of paths per policy and take average
-    n_samples = 10
+    n_samples = 10   # TODO: magic number
     costs = []
     for i in range(n_samples):
         # simulate a trajectory
