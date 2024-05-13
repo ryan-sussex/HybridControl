@@ -34,7 +34,7 @@ class LinearController:
         self.R = R
         self.b = b
         if b is not None:
-            self.A, self.B, self.Q, self.R = create_biased_matrices(A, B, b)
+            self.A, self.B, self.Q, self.R = create_biased_matrices(A, B, Q, R, b)
         self.c = c
         self.d = d
         self.v = v
@@ -67,7 +67,7 @@ class LinearController:
         return self.finite_horizon(x, t, T)
 
 
-def create_biased_matrices(A: np.ndarray, B: np.ndarray, bias: np.ndarray, Q, R):
+def create_biased_matrices(A: np.ndarray, B: np.ndarray, Q, R, bias: np.ndarray):
     A_shape = A.shape
     B_shape = B.shape
 
@@ -77,9 +77,9 @@ def create_biased_matrices(A: np.ndarray, B: np.ndarray, bias: np.ndarray, Q, R)
     A = np.block([[A, bias], [zeros.T, ones]])
     B = np.block([[B], [np.zeros((1, B_shape[1]))]])
 
-    Q = np.zeros(A.shape)
-    Q[: Q.shape[0], : Q.shape[1]] = Q
-    return A, B, Q, R
+    Q_out = np.zeros(A.shape)
+    Q_out[:Q.shape[0], : Q.shape[1]] = Q
+    return A, B, Q_out, R
 
 
 def convert_to_servo(linear_controller: LinearController, x_ref) -> LinearController:
@@ -99,16 +99,17 @@ def convert_to_servo(linear_controller: LinearController, x_ref) -> LinearContro
     bias = (linear_controller.A - np.eye(A_shape[0])) @ x_ref
     bias = bias[:, None]
 
-    if linear_controller.b is not None:
-        bias += linear_controller.b
+    # if linear_controller.b is not None:
+    #     bias += linear_controller.b
 
     A, B, Q, R = create_biased_matrices(
         linear_controller.A,
         linear_controller.B,
-        bias,
         linear_controller.Q,
         linear_controller.R,
+        bias
     )
+    print(A)
     return LinearController(A, B, Q, R)
 
 
@@ -158,8 +159,8 @@ if __name__ == "__main__":
     T = 100
 
     As = [
-        np.array([[1, 0], [0, 1]]),
-        np.array([[-1, 1], [0, -1]]),
+        np.array([[0, 0], [0, 1]]),
+        np.array([[-1, 0], [0, -1]]),
         np.array([[-1, 1], [0, -1]]),
     ]
 
@@ -168,7 +169,6 @@ if __name__ == "__main__":
         np.array([[1, 0], [0, 1]]),
         np.array([[1, 0], [0, 1]]),
     ]
-
     # A = np.array([[-.1, .1], [.2, .1]])
     # B = np.array([[1, 2], [0.1, 3]])
 
@@ -178,8 +178,8 @@ if __name__ == "__main__":
     Q = np.eye(2) * 100
     R = np.eye(2)
 
-    x_0 = np.array([10, 7.29713065])
-    x_ref = np.array([100, 0])
+    x_0 = np.array([0, 7.29713065])
+    x_ref = np.array([10, 0])
 
     lc = LinearController(A, B, Q, R)
     lc = convert_to_servo(lc, x_ref)
@@ -193,8 +193,7 @@ if __name__ == "__main__":
     for t in range(T):
         u = lc.finite_horizon(x_bar, t=t, T=T)
         accum_cost += instantaneous_cost(x_bar, u, lc.Q, lc.R)
-        x = A @ x + B @ u 
-        # + np.random.normal([0, 0], scale=0.2)
+        x = A @ x + B @ u + np.random.normal([0, 0], scale=0.2)
         x_bar = np.r_[x - x_ref, 1]  # translate to internal coords
         traj.append(x)
 
