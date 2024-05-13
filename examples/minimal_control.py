@@ -35,7 +35,7 @@ if __name__ == "__main__":
     # calculate costs between modes
     # lift reward to pymdp agent
 
-    controller = Controller(As=As, Bs=Bs, W=W, b=b)
+    controller = Controller(As=As, Bs=Bs, bs=None, W_u=None, W_x=W, b=b)
     print("COST", controller.cost_matrix)
 
     action = p_0(env)
