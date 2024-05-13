@@ -16,7 +16,7 @@ class LinearController:
         cv + d = 0
     then cost function xP(1, 0, 0, 0)Px, where P projects onto the line
     """
-
+    # TODO: turn coordinate transform into decorator
     def __init__(
         self,
         A: np.ndarray,
@@ -33,8 +33,10 @@ class LinearController:
         self.Q = Q
         self.R = R
         self.b = b
-        if b is not None:
-            self.A, self.B, self.Q, self.R = create_biased_matrices(A, B, Q, R, b)
+        if b is None:
+            self.b = np.zeros(A.shape[0])
+        
+        self.A, self.B, self.Q, self.R = create_biased_matrices(A, B, Q, R, self.b)
         self.c = c
         self.d = d
         self.v = v
@@ -43,18 +45,23 @@ class LinearController:
         self.Ks = None
 
     def infinite_horizon(self, x):
+        x_bar = np.r_[x - self.b, 1]  # internal coords
+
         if self.S_ih is None:
             S = solve_discrete_are(self.A, self.B, self.Q, self.R)
             self.S_ih = S
 
         K = calculate_gain(self.A, self.B, self.Q, self.R, self.S_ih)
-        return -K @ x
+        return -K @ x_bar
 
     def finite_horizon(self, x, t, T):
+        print("bias", x-self.b)
+        x_bar = np.r_[x - self.b, 1]  # internal coords
+
         if self.Ks is not None:
             if t >= T:
                 t = T - 1
-            return -self.Ks[t] @ x
+            return -self.Ks[t] @ x_bar
 
         Ss = [None for _ in range(T)]
         Ss[T - 1] = np.zeros(self.A.shape)
@@ -66,11 +73,16 @@ class LinearController:
         self.Ks = [calculate_gain(self.A, self.B, self.Q, self.R, S) for S in Ss]
         return self.finite_horizon(x, t, T)
 
+    def instantaneous_cost(self, x, u):
+        x_bar = np.r_[x - self.b, 1]  # internal coords
+        return x_bar.T @ self.Q @ x_bar + u.T @ self.R @ u
+
 
 def create_biased_matrices(A: np.ndarray, B: np.ndarray, Q, R, bias: np.ndarray):
     A_shape = A.shape
     B_shape = B.shape
 
+    bias = bias[:, None]
     zeros = np.zeros(A_shape[1])[:, None]
     ones = np.array([[1]])
 
@@ -78,7 +90,8 @@ def create_biased_matrices(A: np.ndarray, B: np.ndarray, Q, R, bias: np.ndarray)
     B = np.block([[B], [np.zeros((1, B_shape[1]))]])
 
     Q_out = np.zeros(A.shape)
-    Q_out[:Q.shape[0], : Q.shape[1]] = Q
+    Q_out[: Q.shape[0], : Q.shape[1]] = Q
+    print("q_out", Q_out.shape)
     return A, B, Q_out, R
 
 
@@ -94,23 +107,13 @@ def convert_to_servo(linear_controller: LinearController, x_ref) -> LinearContro
 
     and Q is transported to the point x_ref.
     """
-    A_shape = linear_controller.A.shape
-
-    bias = (linear_controller.A - np.eye(A_shape[0])) @ x_ref
-    bias = bias[:, None]
-
-    # if linear_controller.b is not None:
-    #     bias += linear_controller.b
-
-    A, B, Q, R = create_biased_matrices(
-        linear_controller.A,
-        linear_controller.B,
-        linear_controller.Q,
-        linear_controller.R,
-        bias
-    )
-    print(A)
-    return LinearController(A, B, Q, R)
+    A = linear_controller.A
+    # unbiased dynamics
+    A_ub = A[:-1, :-1]
+    bias = (A_ub - np.eye(A_ub.shape[0])) @ x_ref
+    A[:-1, -1] -= bias
+    linear_controller.A = A
+    return linear_controller
 
 
 def calculate_gain(A, B, Q, R, S):
@@ -123,34 +126,22 @@ def backwards_riccati(A, B, Q, R, S):
     )
 
 
-def instantaneous_cost(x, u, Q, R):
-    return x.T @ Q @ x + u.T @ R @ u
-
-
 def get_trajectory_cost(A, B, Q, R, x_0, x_ref):
-
     T = 100
-
     lc = LinearController(A, B, Q, R)
     lc = convert_to_servo(lc, x_ref)
-
     accum_cost = 0
-
     # Simulate system
     x = x_0
-    x_bar = np.r_[x - x_ref, 1]  # internal coords
     traj = [x]
     for t in range(T):
-        u = lc.finite_horizon(x_bar, t=t, T=T)
-        accum_cost += instantaneous_cost(x_bar, u, lc.Q, lc.R)
+        u = lc.finite_horizon(x, t=t, T=T)
+        accum_cost += lc.instantaneous_cost(x, u, lc.Q, lc.R)
         x = A @ x + B @ u + np.random.normal([0, 0], scale=0.2)
-        x_bar = np.r_[x - x_ref, 1]  # translate to internal coords
+        # x_bar = np.r_[x - x_ref, 1]  # translate to internal coords
         traj.append(x)
 
     X = np.column_stack(traj)
-
-    # av_cost = accum_cost / T
-
     return accum_cost
 
 
@@ -160,7 +151,7 @@ if __name__ == "__main__":
 
     As = [
         np.array([[0, 0], [0, 1]]),
-        np.array([[-1, 0], [0, -1]]),
+        np.array([[-1., 0], [0, -1]]),
         np.array([[-1, 1], [0, -1]]),
     ]
 
@@ -174,6 +165,8 @@ if __name__ == "__main__":
 
     A = As[1]
     B = Bs[1]
+    b = np.ones(A.shape[0], dtype="float") * -5
+    # b = b[:, None]
 
     Q = np.eye(2) * 100
     R = np.eye(2)
@@ -181,20 +174,22 @@ if __name__ == "__main__":
     x_0 = np.array([0, 7.29713065])
     x_ref = np.array([10, 0])
 
-    lc = LinearController(A, B, Q, R)
+    lc = LinearController(A, B, Q, R, b=b)
     lc = convert_to_servo(lc, x_ref)
 
     accum_cost = 0
 
     # Simulate system
     x = x_0
-    x_bar = np.r_[x - x_ref, 1]  # internal coords
+    # x_bar = np.r_[x - x_ref, 1]  # internal coords
     traj = [x]
     for t in range(T):
-        u = lc.finite_horizon(x_bar, t=t, T=T)
-        accum_cost += instantaneous_cost(x_bar, u, lc.Q, lc.R)
-        x = A @ x + B @ u + np.random.normal([0, 0], scale=0.2)
-        x_bar = np.r_[x - x_ref, 1]  # translate to internal coords
+        print(x.shape)
+        u = lc.finite_horizon(x, t=t, T=T)
+        accum_cost += lc.instantaneous_cost(x, u)
+        x = A @ x + B @ u + np.random.normal([0, 0], scale=0.2) + b
+        print(x.shape)
+        # x_bar = np.r_[x - x_ref, 1]  # translate to internal coords
         traj.append(x)
 
     X = np.column_stack(traj)
