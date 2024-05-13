@@ -2,6 +2,8 @@ import logging
 from typing import List, Optional
 import numpy as np
 
+from ssm import SLDS
+
 from hybrid_control.algebra import extract_adjacency
 from hybrid_control import observer_transition_model as otm
 from hybrid_control.logisitc_reg import mode_posterior
@@ -15,13 +17,13 @@ logger = logging.getLogger("controller")
 class Controller:
 
     def __init__(
-            self,
-            As: List[np.ndarray],
-            Bs: List[np.ndarray],
-            bs: List[np.ndarray],
-            W_u: np.ndarray,
-            W_x: np.ndarray,
-            b: np.ndarray
+        self,
+        As: List[np.ndarray],
+        Bs: List[np.ndarray],
+        bs: List[np.ndarray],
+        W_u: np.ndarray,
+        W_x: np.ndarray,
+        b: np.ndarray,
     ):
         """
         Parameters
@@ -41,6 +43,7 @@ class Controller:
         self.W_x = W_x
         self.b = b
         self.action_dim = Bs[0].shape[1]
+        self.obs_dim = As[0].shape[0]
 
     def mode_posterior(self, observation):
         return mode_posterior(observation, self.W_x, self.b)
@@ -59,8 +62,7 @@ class Controller:
         logger.debug(f"Inferred mode {mode}")
 
         # Discrete
-        self.agent, discrete_action = otm\
-            .step_active_inf_agent(self.agent, mode)
+        self.agent, discrete_action = otm.step_active_inf_agent(self.agent, mode)
         cts_prior = self.mode_priors[discrete_action]
 
         # Continuous
@@ -76,6 +78,14 @@ class Controller:
         """
         return np.random.normal(np.zeros(action_dim), 0.1)
 
+    def estimate(self, obs, actions, **kwargs):
+        rslds = _estimate(obs, actions, self.obs_dim, self.action_dim, self.n_modes, **kwargs)
+        return estimated_system_params(rslds)
+
+    def estimate_and_identify(cls, obs, actions, **kwargs):
+        param_dct = cls.estimate(obs, actions, **kwargs)
+        return cls(**param_dct)
+
 
 def get_discrete_controller(W, b):
     adj = extract_adjacency(W, b)
@@ -89,7 +99,7 @@ def get_cts_controller(As, Bs, i: int, j: int, mode_priors: List):
     lc = LinearController(
         As[i],
         Bs[i],
-        Q=np.eye(As[i].shape[0]) * 100,   # TODO: Magic numbers
+        Q=np.eye(As[i].shape[0]) * 100,  # TODO: Magic numbers
         R=np.eye(Bs[i].shape[0]),
     )
     return convert_to_servo(lc, mode_priors[j])
@@ -102,9 +112,55 @@ def get_all_cts_controllers(As, Bs, mode_priors: List):
     """
     n_modes = len(mode_priors)
     return [
-        [
-            get_cts_controller(As, Bs, i, j, mode_priors)
-            for i in range(n_modes)
-        ]
+        [get_cts_controller(As, Bs, i, j, mode_priors) for i in range(n_modes)]
         for j in range(n_modes)
     ]
+
+
+def estimated_system_params(rslds: SLDS):
+    """
+    Warning! Passed env for simulation, real model does not have access
+    """
+    dynamic_params = rslds.dynamics.params
+    emission_params = rslds.emissions.params
+    softmax_params = rslds.transitions.params
+
+    W_u, W_x, b = softmax_params
+    As, bs, Bs, Sigmas = dynamic_params
+    # TODO: bias term for linear ctrlrs, and extra weight for inputs
+    # Workout exactly what Sigmas are
+    return dict(
+        W_u=W_u, W_x=W_x, b=b, As=As, Bs=Bs, bs=bs
+    )
+
+
+def _estimate(obs, actions, d_obs, d_actions, k_components, n_iters: int = 100) -> SLDS:
+    rslds = SLDS(
+        d_obs,
+        k_components,
+        d_obs,
+        M=d_actions,  # Control dim
+        transitions="recurrent_only",
+        dynamics="diagonal_gaussian",
+        emissions="gaussian_id",
+        single_subspace=True,
+    )
+
+    rslds.initialize(obs, inputs=actions)
+
+    q_elbos, q = rslds.fit(
+        obs,
+        inputs=actions,
+        method="laplace_em",
+        variational_posterior="structured_meanfield",
+        initialize=False,
+        num_iters=n_iters,
+        alpha=0.0,
+    )
+    # results = dict(
+    #     rslds=rslds,
+    #     obs=obs,
+    #     q_elbos=q_elbos,
+    #     q=q
+    # )
+    return rslds
