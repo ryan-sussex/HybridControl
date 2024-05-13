@@ -48,6 +48,7 @@ def check_for_redundancy(W, b):
     redundant = []
     for i in range(len(W)):
         # -ve because lingprog minimises, we need max
+        # TODO: put in some bounds
         res = linprog(-W[i], A_ub=W, b_ub=b, bounds=(None, None))
         if res["status"] == 0:
             # print(np.abs(res["fun"] - b[i]).sum())

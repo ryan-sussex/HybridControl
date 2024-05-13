@@ -124,7 +124,6 @@ if __name__ == "__main__":
     controller = Controller(As=As, Bs=Bs, bs=bs, W_u=W_u, W_x=W_x, b=b)
     action = controller.policy()
 
-    traj = []
     obs = []
     actions = []
     for i in range(ENV_STEPS):

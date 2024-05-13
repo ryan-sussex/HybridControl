@@ -95,6 +95,7 @@ class Controller:
         )
         self.agent, discrete_action = otm.step_active_inf_agent(self.agent, mode)
         cts_prior = self.mode_priors[discrete_action]
+        logger.info(f"Aiming for {cts_prior}")
 
         # Continuous
         cts_ctr = self.cts_ctrs[discrete_action][idx_mode]
