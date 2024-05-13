@@ -142,7 +142,7 @@ def backwards_riccati(A, B, Q, R, S):
 
 
 def get_trajectory_cost(A, B, Q, R, b, x_0, x_ref):
-    T = 100
+    T = 100     # TODO: magic number
     lc = LinearController(A, B, Q, R)
     lc = convert_to_servo(lc, x_ref)
     accum_cost = 0
@@ -153,10 +153,7 @@ def get_trajectory_cost(A, B, Q, R, b, x_0, x_ref):
         u = lc.finite_horizon(x, t=t, T=T)
         accum_cost += lc.instantaneous_cost(x, u, lc.Q, lc.R)
         x = A @ x + B @ u + np.random.normal([0, 0], scale=0.2) - b
-        # x_bar = np.r_[x - x_ref, 1]  # translate to internal coords
         traj.append(x)
-
-    X = np.column_stack(traj)
     return accum_cost
 
 
@@ -175,13 +172,10 @@ if __name__ == "__main__":
         np.array([[1, 0], [0, 1]]),
         np.array([[1, 0], [0, 1]]),
     ]
-    # A = np.array([[-.1, .1], [.2, .1]])
-    # B = np.array([[1, 2], [0.1, 3]])
 
     A = As[1]
     B = Bs[1]
     b = np.ones(A.shape[0], dtype="float") * -5
-    # b = b[:, None]
 
     Q = np.eye(2) * 100
     R = np.eye(2)
@@ -192,26 +186,19 @@ if __name__ == "__main__":
     lc = LinearController(A, B, Q, R, b=b)
     lc = convert_to_servo(lc, x_ref)
 
-    print(lc.A)
-
     accum_cost = 0
-
     # Simulate system
     x = x_0
     traj = [x]
-
     for t in range(T):
-        # x_bar = np.r_[x - x_ref]  # translate to internal coords
         u = lc.finite_horizon(x, t=t, T=T)
         accum_cost += lc.instantaneous_cost(x, u)
-        x = A @ x + B @ u + b
-        # + np.random.normal([0, 0], scale=0.2) + b
+        x = A @ x + B @ u + np.random.normal([0, 0], scale=0.2) + b
         traj.append(x)
 
     X = np.column_stack(traj)
 
     av_cost = accum_cost / T
-
     print("total control cost", accum_cost)
     print("average control cost per timestep", av_cost)
 
