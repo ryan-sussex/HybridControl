@@ -108,7 +108,7 @@ class Controller:
         """
         Default action before observations recieved.
         """
-        return np.random.normal(np.zeros(action_dim), 0.1)
+        return np.random.normal(np.zeros(action_dim), 6)
 
     def estimate(self, obs, actions, **kwargs):
         logger.info("re-estimation..")
@@ -202,3 +202,17 @@ def _estimate(obs, actions, d_obs, d_actions, k_components, n_iters: int = 100) 
     #     q=q
     # )
     return rslds
+
+
+def get_initial_controller(d_obs, d_actions, k_components):
+    rslds = SLDS(
+        d_obs,
+        k_components,
+        d_obs,
+        M=d_actions,  # Control dim
+        transitions="recurrent_only",
+        dynamics="diagonal_gaussian",
+        emissions="gaussian_id",
+        single_subspace=True,
+    )
+    return Controller(**estimated_system_params(rslds))

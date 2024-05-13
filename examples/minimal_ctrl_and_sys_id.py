@@ -5,7 +5,7 @@ import numpy as np
 from ssm import SLDS
 
 from hybrid_control.environments.library import get_three_region_env
-from hybrid_control.controller import Controller
+from hybrid_control.controller import Controller, get_initial_controller
 
 from hybrid_control.plotting.utils import *
 
@@ -20,73 +20,19 @@ def p_0(env):
     return np.random.normal(np.zeros(obs_dim), 0.1)
 
 
-def system_identification(
-        env,
-        k_components: int,
-        env_steps: int = 1000,
-        varitional_iter: int = 100,
-        initial_policy: Callable = p_0
-):
-    data = []
-    actions = []
-    observation, info = env.reset(seed=42)
-
-    action = initial_policy(env)
-
-    for i in tqdm(range(env_steps)):
-        observation, reward, terminated, truncated, info = env.step(action)
-        # if terminated or truncated:
-        #     observation, info = env.reset() 
-        data.append(observation)
-        actions.append(action)
-        if i > 5:
-            obs, acts = data_to_array(data, actions)
-            # action += np.random.normal(loc=0, scale=1)
-            action = policy(env, obs, t=i)
-   
-        if observation.dot(observation) > 50:
-            env.reset()
-
-    env.close()
+def gt(env):
+    """
+    Warning! Passed env for simulation, real model does not have access
+    """
+    W_x = np.block([[linear.w] for linear in env.linear_systems])
+    W_u = np.zeros(W_x.shape)
+    b = np.block([linear.b for linear in env.linear_systems])
+    As = [linear.A for linear in env.linear_systems]
+    Bs = [linear.B for linear in env.linear_systems]
+    return W_x, W_u, b, As, Bs
 
 
-    D_obs = obs.shape[1]  # Data dimension
-    D_latent = D_obs  # Latent dimension
-    # Fit SLDS
-    rslds = SLDS(
-        D_obs,
-        k_components,
-        D_latent,
-        M=2,    # Control dim
-        transitions="recurrent_only",
-        dynamics="diagonal_gaussian",
-        emissions="gaussian_id",
-        single_subspace=True,
-    )
-
-    rslds.initialize(obs, inputs=acts)
-
-    q_elbos, q = rslds.fit(
-        obs,
-        inputs=acts,
-        method="laplace_em",
-        variational_posterior="structured_meanfield",
-        initialize=False,
-        num_iters=varitional_iter,
-        alpha=0.0,
-    )
-
-    results = dict(
-        rslds=rslds,
-        obs=obs,
-        q_elbos=q_elbos,
-        q=q
-    )
-    return results
-
-
-
-def estimated_system_params(rslds: SLDS, env):
+def estimated_system_params(rslds: SLDS):
     """
     Warning! Passed env for simulation, real model does not have access
     """
@@ -102,26 +48,17 @@ def estimated_system_params(rslds: SLDS, env):
 
 
 if __name__ == "__main__":
-    ENV_STEPS = 100
+    ENV_STEPS = 200
 
     env = get_three_region_env(0, 0, 5)
-    # env = get_three_region_env()
     
     K = len(env.linear_systems)  # would be unknown
+    OBS_DIM = env.linear_systems[0].A.shape[0]
+    ACT_DIM = env.linear_systems[0].A.shape[0]
     N_ITER = 100
     N_STEPS = 100
 
-    results = system_identification(
-        env, 
-        k_components=K, 
-        env_steps=N_STEPS, 
-        varitional_iter=N_ITER
-    )
-
-    W_u, W_x, b, As, Bs, bs = estimated_system_params(results["rslds"], env)
-
-
-    controller = Controller(As=As, Bs=Bs, bs=bs, W_u=W_u, W_x=W_x, b=b)
+    controller = get_initial_controller(OBS_DIM, ACT_DIM, K)
     action = controller.policy()
 
     obs = []
@@ -133,7 +70,7 @@ if __name__ == "__main__":
 
         action = controller.policy(observation, action)
 
-        if i == 50:
+        if i == 100:
             controller = controller.estimate_and_identify(np.stack(obs), np.stack(actions))    
 
 
@@ -143,4 +80,6 @@ if __name__ == "__main__":
     b = np.block([linear.b for linear in env.linear_systems])
     print("Trajectory", obs)
     print("model", [np.argmax(controller.mode_posterior(x, u)) for x, u in zip(obs, actions)])
+    
+    W_x, W_u, b, As, Bs = gt(env)
     print("gt", [np.argmax(mode_posterior(x, u, W_x, W_u, b)) for x, u in zip(obs, actions)])
