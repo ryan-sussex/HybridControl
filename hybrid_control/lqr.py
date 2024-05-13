@@ -1,4 +1,6 @@
 from typing import Optional
+from functools import wraps
+
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.linalg import solve_discrete_are
@@ -16,6 +18,7 @@ class LinearController:
         cv + d = 0
     then cost function xP(1, 0, 0, 0)Px, where P projects onto the line
     """
+
     # TODO: turn coordinate transform into decorator
     def __init__(
         self,
@@ -29,16 +32,12 @@ class LinearController:
         v=None,
         x_ref=None,
     ) -> None:
-        # self.A = A
-        # self.B = B
-        # self.Q = Q
-        # self.R = R
         self.b = b
         if b is None:
             self.b = np.zeros(A.shape[0])
-        
+
         self.A, self.B, self.Q, self.R = create_biased_matrices(A, B, Q, R, self.b)
-        
+
         if x_ref is None:
             self.x_ref = np.zeros(A.shape[0])
 
@@ -49,8 +48,18 @@ class LinearController:
         self.S_ih = None
         self.Ks = None
 
+    def coordinate_transform(fn, *args, **kwargs):
+        @wraps(fn)
+        def wrapped(self, x, *args, **kwargs):
+            if x.shape[0] == self.x_ref.shape[0]:
+                x = np.r_[x - self.x_ref, 1]  # internal coords
+            return fn(self, x, *args, **kwargs)
+
+        return wrapped
+
+    @coordinate_transform
     def infinite_horizon(self, x):
-        x_bar = np.r_[x - self.x_ref, 1]  # internal coords
+        x_bar = np.r_[x - self.x_ref, 1]
 
         if self.S_ih is None:
             S = solve_discrete_are(self.A, self.B, self.Q, self.R)
@@ -59,13 +68,12 @@ class LinearController:
         K = calculate_gain(self.A, self.B, self.Q, self.R, self.S_ih)
         return -K @ x_bar
 
+    @coordinate_transform
     def finite_horizon(self, x, t, T):
-        x_bar = np.r_[x - x_ref, 1]  # internal coords
-
         if self.Ks is not None:
             if t >= T:
                 t = T - 1
-            return -self.Ks[t] @ x_bar
+            return -self.Ks[t] @ x
 
         Ss = [None for _ in range(T)]
         Ss[T - 1] = np.zeros(self.A.shape)
@@ -77,15 +85,15 @@ class LinearController:
         self.Ks = [calculate_gain(self.A, self.B, self.Q, self.R, S) for S in Ss]
         return self.finite_horizon(x, t, T)
 
+    @coordinate_transform
     def instantaneous_cost(self, x, u):
-        x_bar = np.r_[x - self.x_ref, 1]  # internal coords
-        return x_bar.T @ self.Q @ x_bar + u.T @ self.R @ u
+        return x.T @ self.Q @ x + u.T @ self.R @ u
 
 
 def create_biased_matrices(A: np.ndarray, B: np.ndarray, Q, R, bias: np.ndarray):
     """
     Translates the linear system to the affine system in (x-x_ref) coords
-        z = [x + b, 1]
+        z = [x, 1]
         z = Az + Bu
 
     Where
@@ -142,7 +150,7 @@ def backwards_riccati(A, B, Q, R, S):
 
 
 def get_trajectory_cost(A, B, Q, R, b, x_0, x_ref):
-    T = 100     # TODO: magic number
+    T = 100  # TODO: magic number
     lc = LinearController(A, B, Q, R)
     lc = convert_to_servo(lc, x_ref)
     accum_cost = 0
