@@ -15,11 +15,6 @@ from tqdm import tqdm
 logging.basicConfig(level=logging.INFO)
 
 
-def p_0(env):
-    obs_dim = env.linear_systems[0].A.shape[0]
-    return np.random.normal(np.zeros(obs_dim), 0.1)
-
-
 def gt(env):
     """
     Warning! Passed env for simulation, real model does not have access
@@ -30,21 +25,6 @@ def gt(env):
     As = [linear.A for linear in env.linear_systems]
     Bs = [linear.B for linear in env.linear_systems]
     return W_x, W_u, b, As, Bs
-
-
-def estimated_system_params(rslds: SLDS):
-    """
-    Warning! Passed env for simulation, real model does not have access
-    """
-    dynamic_params = rslds.dynamics.params
-    emission_params = rslds.emissions.params
-    softmax_params = rslds.transitions.params
-
-    W_u, W_x, b = softmax_params
-    As, bs, Bs, Sigmas = dynamic_params
-    # TODO: bias term for linear ctrlrs, and extra weight for inputs
-    # Workout exactly what Sigmas are
-    return W_u, W_x, b, As, Bs, bs
 
 
 if __name__ == "__main__":

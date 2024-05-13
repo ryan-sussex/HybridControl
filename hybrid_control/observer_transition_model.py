@@ -145,7 +145,6 @@ def create_B(adj, mode_action_names, num_states):
 
 def create_C(num_obs, rew_idx, pun=0, reward=5):
     """create prior preference over mode observations"""
-
     C = utils.obj_array_zeros(num_obs)
     C[0][:] = pun
     C[0][rew_idx] = reward
@@ -172,7 +171,7 @@ def construct_agent(adj: np.ndarray) -> Agent:
     pB = utils.dirichlet_like(B,scale=1)
     # create prior preferences
 
-    rew_idx = 1  # TODO: replace, index of the rewarding observation
+    rew_idx = 2  # TODO: replace, index of the rewarding observation
     C = create_C(num_obs, rew_idx, pun=-5, reward=5)
 
     agent = Agent(
@@ -182,6 +181,7 @@ def construct_agent(adj: np.ndarray) -> Agent:
         C=C,
         policy_len=3,
         policies=None,
+        use_utility=False,
         B_factor_list=None,
         action_selection="deterministic",
     )

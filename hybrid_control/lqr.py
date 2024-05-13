@@ -186,7 +186,7 @@ if __name__ == "__main__":
     R = np.eye(2)
 
     x_0 = np.array([0, 7.29713065])
-    x_ref = np.array([10, 0])
+    x_ref = np.array([0, 0])
 
     lc = LinearController(A, B, Q, R, b=b)
     lc = convert_to_servo(lc, x_ref)
