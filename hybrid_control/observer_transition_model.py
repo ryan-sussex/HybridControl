@@ -205,6 +205,17 @@ def construct_agent(adj: np.ndarray) -> Agent:
 
     return agent
 
+def plot_efe(efe, utility=None, state_ig=None, param_ig=None):
+    
+    plt.plot(efe, label='efe') 
+    if utility is not None and state_ig is not None and param_ig is not None:
+        plt.plot(utility, label='util')
+        plt.plot(state_ig, label='sig')
+        plt.plot(param_ig, label='pig')
+    plt.title('Components of EFE')
+    plt.legend()
+    plt.show()
+
 
 def step_active_inf_agent(agent: Agent, obs, init_step):
     agent.reset()  # resets qs and q_pi to uniform
@@ -213,22 +224,14 @@ def step_active_inf_agent(agent: Agent, obs, init_step):
     
     if not init_step:
         agent.qB = agent.update_B(agent.qs_prev)
+    
+    # NOTE: if plotting different components contributing to EFE, this only works 
+    # with a modification to the pymdp agent class
+    # q_pi, efe, utility, state_ig, param_ig = agent.infer_policies_expand_G()
+    # plot(efe, utility, state_ig, param_ig)
 
     q_pi, efe = agent.infer_policies()
-    
-    # NOTE: below plot of different components contributing to EFE only works 
-    # with a modification to the pymdp agent class
-    
-    # q_pi, efe, utility, state_ig, param_ig = agent.infer_policies_expand_G()
-
-    
-    # plt.plot(efe, label='efe') 
-    # plt.plot(utility, label='util')
-    # plt.plot(state_ig, label='sig')
-    # plt.plot(param_ig, label='pig')
-    # plt.title('Components of EFE')
-    # plt.legend()
-    # plt.show()
+    plot_efe(efe)
 
     chosen_action_id = agent.sample_action()
 
@@ -309,11 +312,3 @@ if __name__ == "__main__":
     )  # because context action is always 'do-nothing'
     choice_action = mode_action_names[movement_id]  # just for recording purposes
     print(choice_action)
-
-    # # step the environment then infer state again so that the dirichlet parameters can properly update
-    # obs_label = my_env.step(choice_action)
-    # obs = [reward_obs_names.index(obs_label[0])]
-    # qs = my_agent.infer_states(obs)
-    # if learning:
-    #     qA = my_agent.update_A(obs)
-    # print(obs_label[0], my_agent.qs[0], choice_action, q_pi)
