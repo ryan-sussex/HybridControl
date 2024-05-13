@@ -14,6 +14,7 @@ from hybrid_control.costs import get_cost_matrix, get_prior_over_policies
 
 logger = logging.getLogger("controller")
 
+
 class Controller:
 
     def __init__(
@@ -39,10 +40,11 @@ class Controller:
         self.obs_dim = As[0].shape[0]
         self.action_dim = Bs[0].shape[1]
         self.n_modes = len(As)
+
         if W_u is None:
             W_u = np.zeros((self.n_modes, self.action_dim))
         if bs is None:
-            bs = [np.zeros((self.obs_dim)) for _ in range(self.n_modes)] 
+            bs = [np.zeros((self.obs_dim)) for _ in range(self.n_modes)]
 
         self.mode_priors = generate_all_priors(W_x, b)
         self.agent = get_discrete_controller(W_x, b)
