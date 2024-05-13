@@ -6,18 +6,10 @@ Created on Mon May  6 11:57:24 2024
 @author: pzc
 """
 import logging
-import pymdp
 from pymdp import utils
-from pymdp.maths import softmax
 from pymdp.agent import Agent
-from pymdp import learning
-from pymdp.maths import spm_log_single
 import numpy as np
 import matplotlib.pyplot as plt
-import scipy.stats as stats
-from scipy.stats import norm
-from scipy.stats import entropy
-import random
 import networkx as nx
 
 
