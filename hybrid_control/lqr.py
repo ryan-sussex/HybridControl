@@ -18,8 +18,6 @@ class LinearController:
         cv + d = 0
     then cost function xP(1, 0, 0, 0)Px, where P projects onto the line
     """
-
-    # TODO: turn coordinate transform into decorator
     def __init__(
         self,
         A: np.ndarray,
