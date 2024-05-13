@@ -47,13 +47,13 @@ class Controller:
             bs = [np.zeros((self.obs_dim)) for _ in range(self.n_modes)]
 
         self.mode_priors = generate_all_priors(W_x, b)
-        self.agent = get_discrete_controller(W_x, b)
         self.cts_ctrs = get_all_cts_controllers(As, Bs, self.mode_priors)
         self.W_x = W_x
         self.W_u = W_u
         self.b = b
 
         self.adj = extract_adjacency(W_x, b)
+        self.agent = get_discrete_controller(self.adj)
         self.cost_matrix = get_cost_matrix(
             self.adj,
             self.mode_priors,
@@ -122,8 +122,7 @@ class Controller:
         return Controller(**param_dct)
 
 
-def get_discrete_controller(W, b):
-    adj = extract_adjacency(W, b)
+def get_discrete_controller(adj):
     return otm.construct_agent(adj)
 
 

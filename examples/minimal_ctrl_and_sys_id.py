@@ -102,7 +102,7 @@ def estimated_system_params(rslds: SLDS, env):
 
 
 if __name__ == "__main__":
-    ENV_STEPS = 10
+    ENV_STEPS = 100
 
     env = get_three_region_env(0, 0, 5)
     # env = get_three_region_env()
@@ -133,7 +133,7 @@ if __name__ == "__main__":
 
         action = controller.policy(observation, action)
 
-        if i == 5:
+        if i == 50:
             controller = controller.estimate_and_identify(np.stack(obs), np.stack(actions))    
 
 
