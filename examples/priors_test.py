@@ -33,7 +33,7 @@ def estimated_system_params(env):
 
 
 if __name__ == "__main__":
-    ENV_STEPS = 10
+    ENV_STEPS = 1000
 
     env = get_three_region_env(0, 0, 5)
 
@@ -45,6 +45,8 @@ if __name__ == "__main__":
 
     controller = Controller(As=As, Bs=Bs, W=W, b=b)
     # print("COST", controller.cost_matrix)
+    
+    print(controller.agent.E)
     
     action = p_0(env)
 

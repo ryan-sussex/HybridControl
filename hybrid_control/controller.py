@@ -1,6 +1,8 @@
 import logging
 from typing import List
 import numpy as np
+from pymdp import utils as pu
+
 
 from hybrid_control.algebra import extract_adjacency
 from hybrid_control import observer_transition_model as otm
@@ -45,11 +47,13 @@ class Controller:
         probs = self.mode_posterior(observation)
         idx_mode = np.argmax(probs)
         mode = np.eye(len(probs))[idx_mode]  # one-hot rep
+        
+        obs = pu.to_obj_array(probs)
         # Discrete
         self.agent.E = get_prior_over_policies(
             self.agent, self.cost_matrix, idx_mode, alpha=0.0001    # TODO: magic number
         )
-        self.agent, discrete_action = otm.step_active_inf_agent(self.agent, mode, init_step)
+        self.agent, discrete_action = otm.step_active_inf_agent(self.agent, obs, init_step)
         cts_prior = self.mode_priors[discrete_action]
         # Continuous
         cts_ctr = self.cts_ctrs[discrete_action][idx_mode]

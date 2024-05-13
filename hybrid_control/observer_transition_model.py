@@ -155,11 +155,12 @@ def create_C(num_obs, rew_idx, pun=0, reward=5):
     """create prior preference over mode observations"""
     if rew_idx == None:
         C = utils.obj_array_zeros(num_obs)
+        C[0] +=1
     else:
         C = utils.obj_array_zeros(num_obs)
         C[0][:] = pun
         C[0][rew_idx] = reward
-    return C[0]
+    return C
 
 def construct_agent(adj: np.ndarray) -> Agent:
     # state
@@ -195,9 +196,10 @@ def construct_agent(adj: np.ndarray) -> Agent:
         policies=None,
         B_factor_list=None,
         use_utility = True, 
-        use_states_info_gain = True,
+        use_states_info_gain = False,
         use_param_info_gain = True,
         action_selection="deterministic",
+        lr_pB = 10,
     )
 
     agent.mode_action_names = mode_action_names
@@ -205,13 +207,16 @@ def construct_agent(adj: np.ndarray) -> Agent:
 
     return agent
 
-def plot_efe(efe, utility=None, state_ig=None, param_ig=None):
+def plot_efe(efe, q_pi, utility=None, state_ig=None, param_ig=None, E=None):
     
     plt.plot(efe, label='efe') 
-    if utility is not None and state_ig is not None and param_ig is not None:
+    plt.plot(q_pi, label = 'q_pi')
+    # print(efe)
+    if utility is not None:
         plt.plot(utility, label='util')
         plt.plot(state_ig, label='sig')
         plt.plot(param_ig, label='pig')
+        plt.plot(E, label='E vector')
     plt.title('Components of EFE')
     plt.legend()
     plt.show()
@@ -227,10 +232,10 @@ def step_active_inf_agent(agent: Agent, obs, init_step):
     
     # NOTE: if plotting different components contributing to EFE, this only works 
     # with a modification to the pymdp agent class
-    # q_pi, efe, utility, state_ig, param_ig = agent.infer_policies_expand_G()
-    # plot(efe, utility, state_ig, param_ig)
+    q_pi, efe, utility, state_ig, param_ig = agent.infer_policies_expand_G()
+    plot_efe(efe, q_pi, utility, state_ig, param_ig, agent.E)
 
-    q_pi, efe = agent.infer_policies()
+    # q_pi, efe = agent.infer_policies()
     # plot_efe(efe)
 
     chosen_action_id = agent.sample_action()
