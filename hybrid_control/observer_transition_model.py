@@ -231,7 +231,7 @@ def step_active_inf_agent(agent: Agent, obs, init_step):
     # plot(efe, utility, state_ig, param_ig)
 
     q_pi, efe = agent.infer_policies()
-    plot_efe(efe)
+    # plot_efe(efe)
 
     chosen_action_id = agent.sample_action()
 

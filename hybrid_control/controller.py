@@ -39,7 +39,7 @@ class Controller:
         return mode_posterior(observation, self.W, self.b)
 
     def policy(self, observation, init_step):
-                """
+        """
         Takes a continuous observation, outputs continuous action.
         """
         probs = self.mode_posterior(observation)
