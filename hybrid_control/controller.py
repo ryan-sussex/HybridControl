@@ -60,6 +60,7 @@ class Controller:
             As,
             Bs,
             **get_default_lqr_costs(self.obs_dim, self.action_dim),
+            bs=bs
         )
 
     def mode_posterior(self, observation, action: Optional[np.ndarray] = None):

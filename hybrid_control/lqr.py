@@ -52,7 +52,6 @@ class LinearController:
             if x.shape[0] == self.x_ref.shape[0]:
                 x = np.r_[x - self.x_ref, 1]  # internal coords
             return fn(self, x, *args, **kwargs)
-
         return wrapped
 
     @coordinate_transform
@@ -157,7 +156,7 @@ def get_trajectory_cost(A, B, Q, R, b, x_0, x_ref):
     traj = [x]
     for t in range(T):
         u = lc.finite_horizon(x, t=t, T=T)
-        accum_cost += lc.instantaneous_cost(x, u, lc.Q, lc.R)
+        accum_cost += lc.instantaneous_cost(x, u)
         x = A @ x + B @ u + np.random.normal([0, 0], scale=0.2) - b
         traj.append(x)
     return accum_cost
