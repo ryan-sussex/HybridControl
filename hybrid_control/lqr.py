@@ -46,7 +46,7 @@ class LinearController:
         self.S_ih = None
         self.Ks = None
 
-    def coordinate_transform(fn, *args, **kwargs):
+    def coordinate_transform(fn):
         @wraps(fn)
         def wrapped(self, x, *args, **kwargs):
             if x.shape[0] == self.x_ref.shape[0]:
