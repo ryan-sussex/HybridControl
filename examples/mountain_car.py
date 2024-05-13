@@ -16,18 +16,6 @@ from tqdm import tqdm
 logging.basicConfig(level=logging.INFO)
 
 
-# def gt(env):
-#     """
-#     Warning! Passed env for simulation, real model does not have access
-#     """
-#     W_x = np.block([[linear.w] for linear in env.linear_systems])
-#     W_u = np.zeros(W_x.shape)
-#     b = np.block([linear.b for linear in env.linear_systems])
-#     As = [linear.A for linear in env.linear_systems]
-#     Bs = [linear.B for linear in env.linear_systems]
-#     return W_x, W_u, b, As, Bs
-
-
 if __name__ == "__main__":
     ENV_STEPS = 200
 
@@ -59,14 +47,3 @@ if __name__ == "__main__":
         if i == 100:
             controller = controller.estimate_and_identify(np.stack(obs), np.stack(actions))    
     env.close()
-
-
-    # # Simple report
-    # from hybrid_control.logisitc_reg import mode_posterior
-    # W = np.block([[linear.w] for linear in env.linear_systems])
-    # b = np.block([linear.b for linear in env.linear_systems])
-    # print("Trajectory", obs)
-    # print("model", [np.argmax(controller.mode_posterior(x, u)) for x, u in zip(obs, actions)])
-    
-    # W_x, W_u, b, As, Bs = gt(env)
-    # print("gt", [np.argmax(mode_posterior(x, u, W_x, W_u, b)) for x, u in zip(obs, actions)])
