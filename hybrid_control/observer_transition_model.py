@@ -216,7 +216,7 @@ def plot_efe(efe, q_pi, utility=None, state_ig=None, param_ig=None, E=None):
     plt.show()
 
 
-def step_active_inf_agent(agent: Agent, obs, init_step):
+def step_active_inf_agent(agent: Agent, obs: np.ndarray):
     agent.reset()  # resets qs and q_pi to uniform
 
     qs = agent.infer_states(obs, distr_obs=True)

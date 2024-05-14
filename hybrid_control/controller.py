@@ -40,7 +40,7 @@ class Controller:
     def mode_posterior(self, observation):
         return mode_posterior(observation, self.W, self.b)
 
-    def policy(self, observation, init_step):
+    def policy(self, observation):
         """
         Takes a continuous observation, outputs continuous action.
         """
@@ -53,7 +53,7 @@ class Controller:
         self.agent.E = get_prior_over_policies(
             self.agent, self.cost_matrix, idx_mode, alpha=0.0001    # TODO: magic number
         )
-        self.agent, discrete_action = otm.step_active_inf_agent(self.agent, obs, init_step)
+        self.agent, discrete_action = otm.step_active_inf_agent(self.agent, obs)
         cts_prior = self.mode_priors[discrete_action]
         # Continuous
         cts_ctr = self.cts_ctrs[discrete_action][idx_mode]

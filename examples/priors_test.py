@@ -47,8 +47,6 @@ if __name__ == "__main__":
     # print("COST", controller.cost_matrix)
         
     action = p_0(env)
-
-    init_step = True
     
     traj = []
     
@@ -58,6 +56,6 @@ if __name__ == "__main__":
             
         traj.append(observation)
 
-        action = controller.policy(observation, init_step)
+        action = controller.policy(observation)
         
         init_step = False
