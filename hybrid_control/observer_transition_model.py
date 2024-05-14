@@ -6,19 +6,13 @@ Created on Mon May  6 11:57:24 2024
 @author: pzc
 """
 import logging
-import pymdp
 from pymdp import utils
-from pymdp.maths import softmax
 from pymdp.agent import Agent
-from pymdp import learning
-from pymdp.maths import spm_log_single
 import numpy as np
 import matplotlib.pyplot as plt
-import scipy.stats as stats
-from scipy.stats import norm
-from scipy.stats import entropy
-import random
 import networkx as nx
+
+from hybrid_control.agent import Agent
 
 
 logger = logging.getLogger()
@@ -227,7 +221,7 @@ def step_active_inf_agent(agent: Agent, obs, init_step):
 
     qs = agent.infer_states(obs, distr_obs=True)
     
-    if not init_step:
+    if agent.qs_prev is not None:
         agent.qB = agent.update_B(agent.qs_prev)
     
     # NOTE: if plotting different components contributing to EFE, this only works 
