@@ -54,7 +54,7 @@ class Controller:
         self.W_u = W_u
         self.b = b
 
-        self.adj = extract_adjacency(W_x, b)
+        self.adj = extract_adjacency(W_x=W_x, W_u=W_u, b=b)
         self.agent = get_discrete_controller(self.adj)
         self.cost_matrix = get_cost_matrix(
             self.adj,
