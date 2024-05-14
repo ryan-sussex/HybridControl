@@ -8,6 +8,10 @@ from scipy.optimize import linprog
 logger = logging.getLogger("linear_algebra")
 
 
+UPPER_BOUND = 1
+LOWER_BOUND = -1
+
+
 def extract_adjacency(W: np.ndarray, b: np.ndarray) -> np.ndarray:
     """
     Creates and adjacency matrix from the logistic regression parameters
@@ -48,8 +52,7 @@ def check_for_redundancy(W, b):
     redundant = []
     for i in range(len(W)):
         # -ve because lingprog minimises, we need max
-        # TODO: put in some bounds
-        res = linprog(-W[i], A_ub=W, b_ub=b, bounds=(None, None))
+        res = linprog(-W[i], A_ub=W, b_ub=b, bounds=(-LOWER_BOUND, UPPER_BOUND))
         if res["status"] == 0:
             # print(np.abs(res["fun"] - b[i]).sum())
             is_redundant = np.abs(res["fun"] + b[i]).sum() > 0.1
