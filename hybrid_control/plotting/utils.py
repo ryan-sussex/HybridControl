@@ -89,10 +89,10 @@ def plot_actions(controller: Controller, obs: np.ndarray, actions: np.ndarray, a
         zk = z == k
         if zk.sum(0) > 0:
             ax.quiver(
-                Bu[zk, 0],
-                Bu[zk, 1],
                 obs[zk, 0],
                 obs[zk, 1],
+                Bu[zk, 0],
+                Bu[zk, 1],
                 color=colors[k % len(colors)],
                 alpha=alpha,
             )
