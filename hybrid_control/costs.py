@@ -5,7 +5,7 @@ from pymdp.maths import softmax as sm
 from hybrid_control.lqr import get_trajectory_cost
 
 
-def get_cost_matrix(adj, priors, As, Bs, Q, R):
+def get_cost_matrix(adj, priors, As, Bs, Q, R, bs):
     """
     Parameters
     ----------
@@ -36,7 +36,7 @@ def get_cost_matrix(adj, priors, As, Bs, Q, R):
             if bool(adj[i, j]):  # if transition allowed
                 x_0 = priors[j]
                 x_ref = priors[i]
-                costs_matrix[i, j] = get_trajectory_cost(As[j], Bs[j], Q, R, x_0, x_ref)
+                costs_matrix[i, j] = get_trajectory_cost(As[j], Bs[j], Q, R, bs[j], x_0, x_ref)
 
     # make negative
     costs_matrix = costs_matrix * -1

@@ -35,14 +35,23 @@ if __name__ == "__main__":
     # calculate costs between modes
     # lift reward to pymdp agent
 
-    controller = Controller(As=As, Bs=Bs, W=W, b=b)
+    controller = Controller(As=As, Bs=Bs, bs=None, W_u=None, W_x=W, b=b)
     print("COST", controller.cost_matrix)
 
     action = p_0(env)
 
-    traj = []
+    obs = []
     for i in range(ENV_STEPS):
         observation, reward, terminated, truncated, info = env.step(action)
-        traj.append(observation)
+        obs.append(observation)
 
-        action = controller.policy(observation)
+        action = controller.policy(observation, action)
+
+
+    # Simple report
+    from hybrid_control.logisitc_reg import mode_posterior
+    W = np.block([[linear.w] for linear in env.linear_systems])
+    b = np.block([linear.b for linear in env.linear_systems])
+    print("Trajectory", obs)
+    print("model", [np.argmax(controller.mode_posterior(x)) for x in obs])
+    # print("gt", [np.argmax(mode_posterior(x, u, W_x, W_u, b)) for x, u in zip(obs, actions)])

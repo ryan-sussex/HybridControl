@@ -15,7 +15,7 @@ import networkx as nx
 from hybrid_control.agent import Agent
 
 
-logger = logging.getLogger()
+logger = logging.getLogger("discrete_controller")
 
 
 def construct_graph():
