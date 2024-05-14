@@ -8,11 +8,25 @@ from scipy.optimize import linprog
 logger = logging.getLogger("linear_algebra")
 
 
-UPPER_BOUND = 3
-LOWER_BOUND = -3
+UPPER_BOUND = .5
+LOWER_BOUND = -.5
 
 
-def extract_adjacency(W: np.ndarray, b: np.ndarray) -> np.ndarray:
+def extract_adjacency(W_x: np.ndarray, W_u: np.ndarray, b: np.ndarray):
+    """
+    Constructs adjacency matrix from decision boundaries.
+
+    Parameters
+    ----------
+        W_x: (n_modes, state_dim)
+        W_u: (n_modes, control_dim)
+        b: (n_modes)
+    """
+    W = np.c_[W_x, W_u]
+    return _extract_adjacency(W, b)
+
+
+def _extract_adjacency(W: np.ndarray, b: np.ndarray) -> np.ndarray:
     """
     Creates and adjacency matrix from the logistic regression parameters
         1. For each w_i find the halfspace LMI representation
@@ -63,8 +77,7 @@ def check_for_redundancy(W, b):
             redundant.append(is_redundant)
         elif res["status"] == 3:
             logger.info(
-                "..linear program constraint check "
-                f"is unbounded for j={str(i)}"
+                "..linear program constraint check " f"is unbounded for j={str(i)}"
             )
             redundant.append(False)
         else:
@@ -106,3 +119,13 @@ def get_basis_vecs(c):
         vec = vec / (vec @ vec)
         basis.append(vec)
     return basis
+
+
+if __name__ == "__main__":
+    state_dim = 4
+    control_dim = 3
+    n_modes = 5
+    W_x = np.ones((n_modes, state_dim))
+    W_u = np.ones((n_modes, control_dim))
+    b = np.zeros(5)
+    extract_adjacency(W_u=W_u, W_x=W_x, b=b)
