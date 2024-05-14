@@ -8,8 +8,8 @@ from scipy.optimize import linprog
 logger = logging.getLogger("linear_algebra")
 
 
-UPPER_BOUND = 1
-LOWER_BOUND = -1
+UPPER_BOUND = 3
+LOWER_BOUND = -3
 
 
 def extract_adjacency(W: np.ndarray, b: np.ndarray) -> np.ndarray:
@@ -52,7 +52,7 @@ def check_for_redundancy(W, b):
     redundant = []
     for i in range(len(W)):
         # -ve because lingprog minimises, we need max
-        res = linprog(-W[i], A_ub=W, b_ub=b, bounds=(-LOWER_BOUND, UPPER_BOUND))
+        res = linprog(-W[i], A_ub=W, b_ub=b, bounds=(LOWER_BOUND, UPPER_BOUND))
         if res["status"] == 0:
             # print(np.abs(res["fun"] - b[i]).sum())
             is_redundant = np.abs(res["fun"] + b[i]).sum() > 0.1
