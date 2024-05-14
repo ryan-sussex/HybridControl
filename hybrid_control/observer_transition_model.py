@@ -232,10 +232,10 @@ def step_active_inf_agent(agent: Agent, obs, init_step):
     
     # NOTE: if plotting different components contributing to EFE, this only works 
     # with a modification to the pymdp agent class
-    q_pi, efe, utility, state_ig, param_ig = agent.infer_policies_expand_G()
-    plot_efe(efe, q_pi, utility, state_ig, param_ig, agent.E)
+    # q_pi, efe, utility, state_ig, param_ig = agent.infer_policies_expand_G()
+    # plot_efe(efe, q_pi, utility, state_ig, param_ig, agent.E)
 
-    # q_pi, efe = agent.infer_policies()
+    q_pi, efe = agent.infer_policies()
     # plot_efe(efe)
 
     chosen_action_id = agent.sample_action()
