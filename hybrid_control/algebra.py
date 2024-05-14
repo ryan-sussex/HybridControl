@@ -8,8 +8,8 @@ from scipy.optimize import linprog
 logger = logging.getLogger("linear_algebra")
 
 
-UPPER_BOUND = .5
-LOWER_BOUND = -.5
+UPPER_BOUND = 3
+LOWER_BOUND = -3
 
 
 def extract_adjacency(W_x: np.ndarray, W_u: np.ndarray, b: np.ndarray):

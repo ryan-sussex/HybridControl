@@ -16,7 +16,8 @@ logging.basicConfig(level=logging.INFO)
 
 
 if __name__ == "__main__":
-    ENV_STEPS = 1000
+    ENV_STEPS = 2000
+    REFIT_EVERY = 500
 
     env = gym.make('Pendulum-v1', g=9.81, render_mode="rgb_array")
     env.reset()
@@ -29,6 +30,7 @@ if __name__ == "__main__":
 
     controller = get_initial_controller(OBS_DIM, ACT_DIM, K)
     action = controller.policy()
+
 
     obs = []
     actions = []
@@ -45,12 +47,14 @@ if __name__ == "__main__":
 
         action = controller.policy(observation, action)
         
-        if i % 200 == 199:
+        if i % REFIT_EVERY == REFIT_EVERY - 1:
             create_video(frames, 60, "./video/out")
             try:
-                controller = controller.estimate_and_identify(np.stack(obs), np.stack(actions))    
-            except Exception:
-                pass
+                plot_suite(controller, np.stack(obs), np.stack(actions))
+                plt.show()
+                controller = controller.estimate_and_identify(np.stack(obs), np.stack(actions))
+            except Exception as e:
+                raise e
 
     create_video(frames, 60, "./video/out")
     env.close()

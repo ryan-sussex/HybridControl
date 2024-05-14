@@ -12,51 +12,55 @@ colors = sns.xkcd_palette(color_names)
 sns.set_style("white")
 sns.set_context("talk")
 
-
-def plot_trajectory(z, x, ax=None, ls="-"):
-    zcps = np.concatenate(([0], np.where(np.diff(z))[0] + 1, [z.size]))
-    if ax is None:
-        fig = plt.figure(figsize=(4, 4))
-        ax = fig.gca()
-    for start, stop in zip(zcps[:-1], zcps[1:]):
-        ax.plot(
-            x[start : stop + 1, 0],
-            x[start : stop + 1, 1],
-            lw=1,
-            ls=ls,
-            color=colors[z[start] % len(colors)],
-            alpha=1.0,
-        )
-
-    return ax
+FIGSIZE=(6,6)
+ALPHA = .8
+X_LIM = (-2 , 2)
 
 
-def plot_original(x, ax=None, ls="-"):
-    if ax is None:
-        fig = plt.figure(figsize=(4, 4))
-        ax = fig.gca()
-    ax.plot(
-        x[:, 0],
-        x[:, 1],
-        lw=1,
-        ls=ls,
-        # color=colors[z[start] % len(colors)],
-        alpha=1.0,
-    )
+# def plot_trajectory(z, x, ax=None, ls="-"):
+#     zcps = np.concatenate(([0], np.where(np.diff(z))[0] + 1, [z.size]))
+#     if ax is None:
+#         fig = plt.figure(figsize=(4, 4))
+#         ax = fig.gca()
+#     for start, stop in zip(zcps[:-1], zcps[1:]):
+#         ax.plot(
+#             x[start : stop + 1, 0],
+#             x[start : stop + 1, 1],
+#             lw=1,
+#             ls=ls,
+#             color=colors[z[start] % len(colors)],
+#             alpha=1.0,
+#         )
 
-    return ax
+#     return ax
+
+
+# def plot_original(x, ax=None, ls="-"):
+#     if ax is None:
+#         fig = plt.figure(figsize=(4, 4))
+#         ax = fig.gca()
+#     ax.plot(
+#         x[:, 0],
+#         x[:, 1],
+#         lw=1,
+#         ls=ls,
+#         # color=colors[z[start] % len(colors)],
+#         alpha=1.0,
+#     )
+
+#     return ax
 
 
 def plot_most_likely_dynamics(
-        controller: Controller,
-        xlim=(-4, 4),
-        ylim=(-3, 3),
-        nxpts=30,
-        nypts=30,
-        alpha=0.8,
-        ax=None,
-        figsize=(3, 3),
-    ):
+    controller: Controller,
+    xlim=X_LIM,
+    ylim=X_LIM,
+    nxpts=30,
+    nypts=30,
+    alpha=ALPHA,
+    ax=None,
+    figsize=(6, 6),
+):
     K = controller.n_modes
     D = controller.obs_dim
 
@@ -64,23 +68,26 @@ def plot_most_likely_dynamics(
     y = np.linspace(*ylim, nypts)
     X, Y = np.meshgrid(x, y)
     xy = np.column_stack((X.ravel(), Y.ravel()))
-        
-    missing = np.zeros((xy.shape[0], D-2))
-    
+
+    missing = np.zeros((xy.shape[0], D - 2))
+
     states = np.c_[xy, missing]
     actions = np.zeros((xy.shape[0], controller.action_dim))
-    
+
     probs = np.stack(
-        [controller.mode_posterior(state, action) for state, action in zip(states, actions)]
+        [
+            controller.mode_posterior(state, action)
+            for state, action in zip(states, actions)
+        ]
     )
     z = np.argmax(probs, axis=1)
 
     if ax is None:
-        fig = plt.figure(figsize=figsize)
+        fig = plt.figure(figsize=FIGSIZE)
         ax = fig.add_subplot(111)
 
     for k, (A, b) in enumerate(zip(controller.As, controller.bs)):
-        dxydt_m = xy.dot(A.T) + b - xy
+        dxydt_m = states.dot(A.T) + b - states
 
         zk = z == k
         if zk.sum(0) > 0:
@@ -92,8 +99,86 @@ def plot_most_likely_dynamics(
                 color=colors[k % len(colors)],
                 alpha=alpha,
             )
+            ax.legend([str(i) for i in range(K)])
+            ax.set_xlim(X_LIM)
+            ax.set_ylim(X_LIM)
+            ax.set_title("Most likely dynamics,  dims(0,1)")
     return
 
+
+def plot_actions(controller: Controller, obs: np.ndarray, actions: np.ndarray, alpha=.5, ax=None):
+    if ax is None:
+        fig = plt.figure(figsize=FIGSIZE)
+        ax = fig.add_subplot(111)
+    
+    
+    probs = np.stack(
+        [
+            controller.mode_posterior(state, action)
+            for state, action in zip(obs, actions)
+        ]
+    )
+    z = np.argmax(probs, axis=1)
+    for k, B in enumerate(controller.Bs):
+        Bu = actions @ B.T + obs
+
+        zk = z == k
+        if zk.sum(0) > 0:
+            ax.quiver(
+                obs[zk, 0],
+                obs[zk, 1],
+                Bu[zk, 0],
+                Bu[zk, 1],
+                color=colors[k % len(colors)],
+                alpha=alpha,
+            )
+            ax.legend([str(i) for i in range(controller.n_modes)])
+            ax.set_xlim(X_LIM)
+            ax.set_ylim(X_LIM)
+            ax.set_title("Action applied dims(0,1)")
+    return
+
+
+def plot_trajectory(
+        controller,
+        x,
+        actions,
+        ls="-",
+        ax=None,
+):
+    probs = np.stack(
+        [
+            controller.mode_posterior(state, action)
+            for state, action in zip(x, actions)
+        ]
+    )
+    z = np.argmax(probs, axis=1)
+    
+    zcps = np.concatenate(([0], np.where(np.diff(z))[0] + 1, [z.size]))
+    if ax is None:
+        fig = plt.figure(figsize=FIGSIZE)
+        ax = fig.add_subplot(111)
+    for start, stop in zip(zcps[:-1], zcps[1:]):
+        ax.plot(
+            x[start : stop + 1, 0],
+            x[start : stop + 1, 1],
+            lw=1,
+            ls=ls,
+            color=colors[z[start] % len(colors)],
+            alpha=1.0,
+        )
+        ax.set_xlim(X_LIM)
+        ax.set_ylim(X_LIM)
+        ax.set_title("Trajectory dims(0,1)")
+    return
+
+
+
+def plot_suite(controller: Controller, obs: np.ndarray, actions:np.ndarray):
+    plot_most_likely_dynamics(controller)
+    plot_trajectory(controller, obs, actions)
+    plot_actions(controller, obs, actions)
+    return 
 
 
 

@@ -2,6 +2,7 @@ import logging
 from typing import List, Callable
 import numpy as np
 import gym
+import matplotlib.pyplot as plt
 
 from ssm import SLDS
 
@@ -17,6 +18,7 @@ logging.basicConfig(level=logging.INFO)
 
 if __name__ == "__main__":
     ENV_STEPS = 1000
+    REFIT_EVERY = 200
 
     env = gym.make('MountainCarContinuous-v0', render_mode="rgb_array")
     env.reset()
@@ -45,12 +47,14 @@ if __name__ == "__main__":
 
         action = controller.policy(observation, action)
         
-        if i % 200 == 199:
+        if i % REFIT_EVERY == REFIT_EVERY - 1:
             create_video(frames, 60, "./video/out")
             try:
-                controller = controller.estimate_and_identify(np.stack(obs), np.stack(actions))    
-            except Exception:
-                pass
+                plot_suite(controller, np.stack(obs), np.stack(actions))
+                plt.show()
+                controller = controller.estimate_and_identify(np.stack(obs), np.stack(actions))
+            except Exception as e:
+                raise e
 
     create_video(frames, 60, "./video/out")
     env.close()

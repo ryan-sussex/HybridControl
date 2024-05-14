@@ -52,8 +52,9 @@ if __name__ == "__main__":
         action = controller.policy(observation, action)
 
         if i == 100:
+            plot_suite(controller, np.stack(obs), np.stack(actions))
+            plt.show()
             controller = controller.estimate_and_identify(np.stack(obs), np.stack(actions))    
-
 
     # Simple report
     from hybrid_control.logisitc_reg import mode_posterior
