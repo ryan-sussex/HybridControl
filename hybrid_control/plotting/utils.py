@@ -4,6 +4,9 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 
+from hybrid_control.controller import Controller
+
+
 color_names = ["windows blue", "red", "amber", "faded green"]
 colors = sns.xkcd_palette(color_names)
 sns.set_style("white")
@@ -43,7 +46,58 @@ def plot_original(x, ax=None, ls="-"):
 
     return ax
 
+
 def plot_most_likely_dynamics(
+        controller: Controller,
+        xlim=(-4, 4),
+        ylim=(-3, 3),
+        nxpts=30,
+        nypts=30,
+        alpha=0.8,
+        ax=None,
+        figsize=(3, 3),
+    ):
+    K = controller.n_modes
+    D = controller.obs_dim
+
+    x = np.linspace(*xlim, nxpts)
+    y = np.linspace(*ylim, nypts)
+    X, Y = np.meshgrid(x, y)
+    xy = np.column_stack((X.ravel(), Y.ravel()))
+        
+    missing = np.zeros((xy.shape[0], D-2))
+    
+    states = np.c_[xy, missing]
+    actions = np.zeros((xy.shape[0], controller.action_dim))
+    
+    probs = np.stack(
+        [controller.mode_posterior(state, action) for state, action in zip(states, actions)]
+    )
+    z = np.argmax(probs, axis=1)
+
+    if ax is None:
+        fig = plt.figure(figsize=figsize)
+        ax = fig.add_subplot(111)
+
+    for k, (A, b) in enumerate(zip(controller.As, controller.bs)):
+        dxydt_m = xy.dot(A.T) + b - xy
+
+        zk = z == k
+        if zk.sum(0) > 0:
+            ax.quiver(
+                xy[zk, 0],
+                xy[zk, 1],
+                dxydt_m[zk, 0],
+                dxydt_m[zk, 1],
+                color=colors[k % len(colors)],
+                alpha=alpha,
+            )
+    return
+
+
+
+
+def _plot_most_likely_dynamics(
     model,
     xlim=(-4, 4),
     ylim=(-3, 3),
@@ -96,14 +150,14 @@ def plot_most_likely_dynamics(
 
 def plot_phases(Ws, rs, ax=None, linestyle=None):
     if ax is None:
-        fig = plt.figure(figsize=(6,6))
+        fig = plt.figure(figsize=(6, 6))
         ax = fig.add_subplot(111)
 
     min_ = -10
     max_ = 10
     x = np.linspace(min_, max_, 100)
     for i in range(len(Ws)):
-        y = rs[i] - Ws[i][0]/Ws[i][1] * x
+        y = rs[i] - Ws[i][0] / Ws[i][1] * x
         ax.plot(x, y, linestyle=linestyle)
 
 
@@ -114,11 +168,11 @@ def add_derivatives(data):
 
 
 def policy(env, obs, t, horizon=200):
-    return np.random.normal(np.array([0,0]), 1)
+    return np.random.normal(np.array([0, 0]), 1)
 
 
 def p_0():
-    return np.random.normal(np.array([0,0]), .1)
+    return np.random.normal(np.array([0, 0]), 0.1)
 
 
 def data_to_array(data: List, actions: List):
