@@ -33,7 +33,7 @@ def estimated_system_params(env):
 
 
 if __name__ == "__main__":
-    ENV_STEPS = 1000
+    ENV_STEPS = 50
 
     env = get_three_region_env(0, 0, 5)
 

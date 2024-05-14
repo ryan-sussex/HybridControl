@@ -40,6 +40,9 @@ def get_cost_matrix(adj, priors, As, Bs, Q, R):
 
     # make negative
     costs_matrix = costs_matrix * -1
+    
+    # make cost of impossible transitions very high?
+    # costs_matrix[costs_matrix==0] = -100000
 
     return costs_matrix
 
