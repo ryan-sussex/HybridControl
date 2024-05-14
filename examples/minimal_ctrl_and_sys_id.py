@@ -39,6 +39,7 @@ if __name__ == "__main__":
     N_STEPS = 100
 
     controller = get_initial_controller(OBS_DIM, ACT_DIM, K)
+    print(controller.adj)
     action = controller.policy()
 
     obs = []

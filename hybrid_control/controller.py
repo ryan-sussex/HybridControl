@@ -1,6 +1,8 @@
 import logging
 from typing import List, Optional
 import numpy as np
+from pymdp import utils as pu
+
 
 from ssm import SLDS
 
@@ -87,13 +89,15 @@ class Controller:
         probs = self.mode_posterior(observation, action)
         idx_mode = np.argmax(probs)
         mode = np.eye(len(probs))[idx_mode]  # one-hot rep
+        
+        obs = pu.to_obj_array(probs)
         logger.debug(f"Inferred mode {mode}")
 
         # Discrete
         self.agent.E = get_prior_over_policies(
             self.agent, self.cost_matrix, idx_mode, alpha=0.0001  # TODO: magic number
         )
-        self.agent, discrete_action = otm.step_active_inf_agent(self.agent, mode)
+        self.agent, discrete_action = otm.step_active_inf_agent(self.agent, obs)
         cts_prior = self.mode_priors[discrete_action]
         logger.info(f"Aiming for {cts_prior}")
 
