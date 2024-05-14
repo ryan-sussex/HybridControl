@@ -45,9 +45,7 @@ if __name__ == "__main__":
 
     controller = Controller(As=As, Bs=Bs, W=W, b=b)
     # print("COST", controller.cost_matrix)
-    
-    print(controller.agent.E)
-    
+        
     action = p_0(env)
 
     init_step = True
