@@ -8,11 +8,11 @@ from scipy.optimize import linprog
 logger = logging.getLogger("linear_algebra")
 
 
-UPPER_BOUND = 2
-LOWER_BOUND = -2
+UPPER_BOUND = 5
+LOWER_BOUND = -5
 # TODO: can add specific constraints based on problems control bounds
 
-def extract_adjacency(W_x: np.ndarray, W_u: np.ndarray, b: np.ndarray):
+def extract_adjacency(W_x: np.ndarray, W_u: np.ndarray, b: np.ndarray, u_max=1):    # TODO: get from env
     """
     Constructs adjacency matrix from decision boundaries.
 
@@ -23,7 +23,16 @@ def extract_adjacency(W_x: np.ndarray, W_u: np.ndarray, b: np.ndarray):
         b: (n_modes)
     """
     W = np.c_[W_x, W_u]
-    return _extract_adjacency(W, b)
+    if u_max is not None:
+        u_idx = np.zeros((1, W.shape[1]))
+        u_idx[- W_u.shape[0]:] = 1
+        W = np.r_[W, u_idx, -u_idx]
+        b = np.r_[b, u_max, -u_max]
+    adj = _extract_adjacency(W, b)
+    
+    if u_max is not None:
+        adj = adj[:-2, :-2]
+    return adj
 
 
 def _extract_adjacency(W: np.ndarray, b: np.ndarray) -> np.ndarray:
