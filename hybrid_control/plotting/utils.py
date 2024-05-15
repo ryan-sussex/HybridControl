@@ -12,9 +12,9 @@ colors = sns.xkcd_palette(color_names)
 sns.set_style("white")
 sns.set_context("talk")
 
-FIGSIZE=(6,6)
-ALPHA = .8
-X_LIM = (-2 , 2)
+FIGSIZE = (6, 6)
+ALPHA = 0.8
+X_LIM = (-2, 2)
 
 
 def plot_most_likely_dynamics(
@@ -70,12 +70,13 @@ def plot_most_likely_dynamics(
     return
 
 
-def plot_actions(controller: Controller, obs: np.ndarray, actions: np.ndarray, alpha=.5, ax=None):
+def plot_actions(
+    controller: Controller, obs: np.ndarray, actions: np.ndarray, alpha=0.5, ax=None
+):
     if ax is None:
         fig = plt.figure(figsize=FIGSIZE)
         ax = fig.add_subplot(111)
-    
-    
+
     probs = np.stack(
         [
             controller.mode_posterior(state, action)
@@ -104,20 +105,17 @@ def plot_actions(controller: Controller, obs: np.ndarray, actions: np.ndarray, a
 
 
 def plot_trajectory(
-        controller,
-        x,
-        actions,
-        ls="dashed",
-        ax=None,
+    controller,
+    x,
+    actions,
+    ls="dashed",
+    ax=None,
 ):
     probs = np.stack(
-        [
-            controller.mode_posterior(state, action)
-            for state, action in zip(x, actions)
-        ]
+        [controller.mode_posterior(state, action) for state, action in zip(x, actions)]
     )
     z = np.argmax(probs, axis=1)
-    
+
     zcps = np.concatenate(([0], np.where(np.diff(z))[0] + 1, [z.size]))
     if ax is None:
         fig = plt.figure(figsize=FIGSIZE)
@@ -142,6 +140,7 @@ def draw_graph(adj, ax=None):
         fig = plt.figure(figsize=FIGSIZE)
         ax = fig.add_subplot(111)
     G = nx.from_numpy_array(adj)
+
     # Draw the graph
     pos = nx.spring_layout(G)  # positions for all nodes
     nx.draw(
@@ -149,11 +148,14 @@ def draw_graph(adj, ax=None):
         pos,
         with_labels=True,
         node_color="skyblue",
-        node_size=700,
+        node_size=500,
         edge_color="k",
         linewidths=1,
         font_size=15,
     )
+    labels = nx.get_edge_attributes(G, "weight")
+    # nx.draw_networkx_edges(G, pos, edgelist=G.edges(), edge_color='r', arrows=True)
+    nx.draw_networkx_edge_labels(G, pos, edge_labels=labels)
     return
 
 
@@ -161,18 +163,23 @@ def draw_mode_graph(controller: Controller):
     draw_graph(controller.adj)
     return
 
+
+def draw_cost_graph(controller: Controller):
+    draw_graph(controller.cost_matrix)
+    return
+
     # Show plot
 
 
-def plot_suite(controller: Controller, obs: np.ndarray, actions:np.ndarray):
+def plot_suite(controller: Controller, obs: np.ndarray, actions: np.ndarray):
     if controller.obs_dim < 2:
         return
     plot_most_likely_dynamics(controller)
     plot_trajectory(controller, obs, actions)
     plot_actions(controller, obs, actions)
     draw_mode_graph(controller)
-    return 
-
+    draw_cost_graph(controller)
+    return
 
 
 def plot_phases(Ws, rs, ax=None, linestyle=None):
