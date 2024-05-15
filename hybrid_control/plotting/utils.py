@@ -84,7 +84,7 @@ def plot_actions(controller: Controller, obs: np.ndarray, actions: np.ndarray, a
     )
     z = np.argmax(probs, axis=1)
     for k, B in enumerate(controller.Bs):
-        Bu = actions @ B.T + obs
+        Bu = - actions @ B.T + obs
 
         zk = z == k
         if zk.sum(0) > 0:
