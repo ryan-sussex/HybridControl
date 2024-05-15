@@ -84,7 +84,7 @@ def plot_actions(controller: Controller, obs: np.ndarray, actions: np.ndarray, a
     )
     z = np.argmax(probs, axis=1)
     for k, B in enumerate(controller.Bs):
-        Bu = - actions @ B.T + obs
+        Bu = actions @ B.T + obs
 
         zk = z == k
         if zk.sum(0) > 0:
@@ -141,15 +141,7 @@ def draw_graph(adj, ax=None):
     if ax is None:
         fig = plt.figure(figsize=FIGSIZE)
         ax = fig.add_subplot(111)
-    # Create a directed graph
     G = nx.from_numpy_array(adj)
-    # Add edges based on adjacency matrix
-    # num_nodes = adj.shape[0]
-    # for i in range(num_nodes):
-    #     for j in range(num_nodes):
-    #         if adj[i][j] == 1:
-    #             G.add_edge(i, j)
-
     # Draw the graph
     pos = nx.spring_layout(G)  # positions for all nodes
     nx.draw(
