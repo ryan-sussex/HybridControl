@@ -7,7 +7,7 @@ import networkx as nx
 from hybrid_control.controller import Controller
 
 
-color_names = ["windows blue", "red", "amber", "faded green"]
+color_names = ["windows blue", "red", "amber", "faded green", "purple", "grey"]
 colors = sns.xkcd_palette(color_names)
 sns.set_style("white")
 sns.set_context("talk")
@@ -54,19 +54,19 @@ def plot_most_likely_dynamics(
         dxydt_m = states.dot(A.T) + b - states
 
         zk = z == k
-        if zk.sum(0) > 0:
-            ax.quiver(
-                xy[zk, 0],
-                xy[zk, 1],
-                dxydt_m[zk, 0],
-                dxydt_m[zk, 1],
-                color=colors[k % len(colors)],
-                alpha=ALPHA,
-            )
-            ax.legend([str(i) for i in range(K)])
-            ax.set_xlim(X_LIM)
-            ax.set_ylim(X_LIM)
-            ax.set_title("Most likely dynamics,  dims(0,1)")
+        # if zk.sum(0) > 0:
+        ax.quiver(
+            xy[zk, 0],
+            xy[zk, 1],
+            dxydt_m[zk, 0],
+            dxydt_m[zk, 1],
+            color=colors[k % len(colors)],
+            alpha=ALPHA,
+        )
+    ax.legend([str(i) for i in range(K)])
+    ax.set_xlim(X_LIM)
+    ax.set_ylim(X_LIM)
+    ax.set_title("Most likely dynamics,  dims(0,1)")
     return
 
 
@@ -87,19 +87,19 @@ def plot_actions(controller: Controller, obs: np.ndarray, actions: np.ndarray, a
         Bu = actions @ B.T + obs
 
         zk = z == k
-        if zk.sum(0) > 0:
-            ax.quiver(
-                obs[zk, 0],
-                obs[zk, 1],
-                Bu[zk, 0],
-                Bu[zk, 1],
-                color=colors[k % len(colors)],
-                alpha=alpha,
-            )
-            ax.legend([str(i) for i in range(controller.n_modes)])
-            ax.set_xlim(X_LIM)
-            ax.set_ylim(X_LIM)
-            ax.set_title("Action applied dims(0,1)")
+        # if zk.sum(0) > 0:
+        ax.quiver(
+            obs[zk, 0],
+            obs[zk, 1],
+            Bu[zk, 0],
+            Bu[zk, 1],
+            color=colors[k % len(colors)],
+            alpha=alpha,
+        )
+    ax.legend([str(i) for i in range(controller.n_modes)])
+    ax.set_xlim(X_LIM)
+    ax.set_ylim(X_LIM)
+    ax.set_title("Action applied dims(0,1)")
     return
 
 
