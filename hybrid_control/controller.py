@@ -50,6 +50,11 @@ class Controller:
 
         self.mode_priors = generate_all_priors(W_x, b)
         self.cts_ctrs = get_all_cts_controllers(As, Bs, self.mode_priors)
+        
+        self.As = As
+        self.Bs = Bs
+        self.bs = bs
+        
         self.W_x = W_x
         self.W_u = W_u
         self.b = b

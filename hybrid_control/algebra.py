@@ -8,9 +8,9 @@ from scipy.optimize import linprog
 logger = logging.getLogger("linear_algebra")
 
 
-UPPER_BOUND = .5
-LOWER_BOUND = -.5
-
+UPPER_BOUND = 2
+LOWER_BOUND = -2
+# TODO: can add specific constraints based on problems control bounds
 
 def extract_adjacency(W_x: np.ndarray, W_u: np.ndarray, b: np.ndarray):
     """
