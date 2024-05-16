@@ -227,7 +227,6 @@ def plot_multiple_overlapped(
     start = 0
     end = chunksize
     for i, ax in enumerate(axs):
-        print(start, end)
         plot_overlapped(
             controller,
             obs,
