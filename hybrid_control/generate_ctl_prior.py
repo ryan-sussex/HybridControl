@@ -11,8 +11,11 @@ import matplotlib.pyplot as plt
 from scipy.special import softmax
 
 
+THRESHOLD = .7
+
+
 def generate_prior(
-    W, r, x_init, z, lr: float = 1.0, n_steps: int = 10000, threshold: float = 0.9
+    W, r, x_init, z, lr: float = 1.0, n_steps: int = 10000, threshold: float = THRESHOLD
 ):
     """
 
@@ -68,7 +71,7 @@ def generate_all_priors(
     r: np.ndarray,
     lr: float = 1.0,
     n_steps: int = 10000,
-    threshold: float = 0.9,
+    threshold: float = THRESHOLD,
 ):
     """
 
