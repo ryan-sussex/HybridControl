@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -25,6 +25,8 @@ def plot_most_likely_dynamics(
     nxpts=30,
     nypts=30,
     ax=None,
+    at_state=None,
+    at_action=None,
 ):
     K = controller.n_modes
     D = controller.obs_dim
@@ -35,6 +37,10 @@ def plot_most_likely_dynamics(
     xy = np.column_stack((X.ravel(), Y.ravel()))
 
     missing = np.zeros((xy.shape[0], D - 2))
+    if at_state is not None:
+        at_state = at_state.reshape((1, -1))
+        missing = np.repeat(at_state, repeats=xy.shape[0], axis=0)
+        missing = missing[:, D:]
 
     states = np.c_[xy, missing]
     actions = np.zeros((xy.shape[0], controller.action_dim))
@@ -79,6 +85,7 @@ def plot_actions(
     ax=None,
     xlim=X_LIM,
     ylim=X_LIM,
+    discrete_actions: Optional[List[int]] = None,
 ):
     if ax is None:
         fig = plt.figure(figsize=FIGSIZE)
@@ -95,13 +102,18 @@ def plot_actions(
         Bu = -actions @ B.T + obs
 
         zk = z == k
-        # if zk.sum(0) > 0:
+
+        color = colors[k % len(colors)]
+        if discrete_actions is not None:
+            color = [colors[i % len(colors)] for i in discrete_actions if i == k]
+            print(len(color))
+
         ax.quiver(
             obs[zk, 0],
             obs[zk, 1],
             Bu[zk, 0],
             Bu[zk, 1],
-            color=colors[k % len(colors)],
+            color=color,
             alpha=alpha,
         )
     ax.legend([str(i) for i in range(controller.n_modes)])
@@ -129,6 +141,10 @@ def plot_trajectory(
     if ax is None:
         fig = plt.figure(figsize=FIGSIZE)
         ax = fig.add_subplot(111)
+
+    ax.plot(x[0, 0], x[0, 1], "go")
+    ax.plot(x[-1, 0], x[-1, 1], "r+")
+
     for start, stop in zip(zcps[:-1], zcps[1:]):
         ax.plot(
             x[start : stop + 1, 0],
@@ -144,22 +160,43 @@ def plot_trajectory(
     return ax
 
 
+def get_lims(x, scale=0.5):
+    xlim = (np.min(x[:, 0]), np.max(x[:, 0]))
+    x_diff = xlim[1] - xlim[0]
+    ylim = (np.min(x[:, 1]), np.max(x[:, 1]))
+    y_diff = ylim[1] - ylim[0]
+    xlim = (xlim[0] - scale * x_diff, xlim[1] + scale * x_diff)
+    ylim = (ylim[0] - scale * y_diff, ylim[1] + scale * y_diff)
+    return xlim, ylim
+
+
 def plot_overlapped(
-    controller: Controller, obs: np.ndarray, actions: np.ndarray, end=None
+    controller: Controller,
+    obs: np.ndarray,
+    actions: np.ndarray,
+    end=None,
+    discrete_actions=Optional[List[int]],
 ):
     if end is not None:
         obs = obs[:end]
         actions = actions[:end]
 
-    xlim = (np.min(obs[:, 0]), np.max(obs[:, 0]))
-    ylim = (np.min(obs[:, 1]), np.max(obs[:, 1]))
-    xlim = (xlim[0] -.2 * xlim[0], xlim[1] + .2 * xlim[1])
-    ylim = (ylim[0] -.2 * ylim[0], ylim[1] + .2 * ylim[1])
+    xlim, ylim = get_lims(obs)
 
-
-    ax = plot_most_likely_dynamics(controller, alpha=0.2, xlim=xlim, ylim=ylim)
+    ax = plot_most_likely_dynamics(
+        controller, alpha=0.2, xlim=xlim, ylim=ylim, at_state=obs[0]
+    )
     plot_trajectory(controller, obs, actions, ax=ax, xlim=xlim, ylim=ylim)
-    plot_actions(controller, obs, actions, ax=ax, alpha=1, xlim=xlim, ylim=ylim)
+    plot_actions(
+        controller,
+        obs,
+        actions,
+        ax=ax,
+        alpha=1,
+        xlim=xlim,
+        ylim=ylim,
+        discrete_actions=discrete_actions,
+    )
     return
 
 
@@ -199,13 +236,31 @@ def draw_cost_graph(controller: Controller):
     # Show plot
 
 
-def plot_suite(controller: Controller, obs: np.ndarray, actions: np.ndarray):
+def plot_suite(
+    controller: Controller,
+    obs: np.ndarray,
+    actions: np.ndarray,
+    discrete_actions: Optional[List[int]] = None,
+):
     if controller.obs_dim < 2:
         return
-    plot_overlapped(controller, obs, actions, end=20)
-    plot_most_likely_dynamics(controller)
-    plot_trajectory(controller, obs, actions)
-    plot_actions(controller, obs, actions)
+    plot_overlapped(
+        controller, obs, actions, end=100, discrete_actions=discrete_actions
+    )
+
+    xlim, ylim = get_lims(obs)
+
+    plot_most_likely_dynamics(controller, xlim=xlim, ylim=ylim)
+    plot_trajectory(controller, obs, actions, xlim=xlim, ylim=ylim)
+    plot_actions(
+        controller,
+        obs,
+        actions,
+        xlim=xlim,
+        ylim=ylim,
+        discrete_actions=discrete_actions,
+    )
+    # Graphs
     draw_mode_graph(controller)
     draw_cost_graph(controller)
     return
