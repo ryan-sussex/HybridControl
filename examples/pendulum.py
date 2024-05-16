@@ -36,6 +36,7 @@ def preprocess(obs: np.ndarray, polar=True):
         obs = to_polar(obs)
     return obs
 
+
 if __name__ == "__main__":
     POLAR = True
     ENV_STEPS = 2000
@@ -55,25 +56,33 @@ if __name__ == "__main__":
 
     obs = []
     actions = []
+    discrete_actions = []
     frames = []
     for i in range(ENV_STEPS):
         observation, reward, terminated, truncated, info = env.step(action)
-        observation = preprocess(observation)
+        observation = preprocess(observation, polar=POLAR)
         frames.append(env.render())
 
         if terminated or truncated:
             observation, info = env.reset()
-            observation = preprocess(observation)
+            observation = preprocess(observation, polar=POLAR)
 
         obs.append(observation)
         actions.append(action)
-
+        discrete_actions.append(controller.discrete_action)
+        
         action = controller.policy(observation, action)
 
         if i % REFIT_EVERY == REFIT_EVERY - 1:
             create_video(frames, 60, "./video/out")
             try:
-                plot_suite(controller, np.stack(obs), np.stack(actions))
+                plot_suite(
+                    controller,
+                    np.stack(obs),
+                    np.stack(actions),
+                    discrete_actions=discrete_actions,
+                    start=i + 1 - REFIT_EVERY,
+                )
                 plt.show()
                 controller = controller.estimate_and_identify(
                     np.stack(obs), np.stack(actions)

@@ -69,6 +69,7 @@ class Controller:
             **get_default_lqr_costs(self.obs_dim, self.action_dim),
             bs=bs
         )
+        self.discrete_action = 0
 
     def mode_posterior(self, observation, action: Optional[np.ndarray] = None):
         if action is None:
@@ -104,6 +105,7 @@ class Controller:
         )
         self.agent, discrete_action = otm.step_active_inf_agent(self.agent, obs)
         cts_prior = self.mode_priors[discrete_action]
+        self.discrete_action = discrete_action  # For debugging
         logger.info(f"Aiming for {cts_prior}")
 
         # Continuous

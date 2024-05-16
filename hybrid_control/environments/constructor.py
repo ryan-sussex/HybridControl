@@ -19,8 +19,8 @@ class LinearSystem:
         self.w = w
         self.b = b
 
-    def forward(self, x, u):
-        return self.A @ x + self.B @ u
+    def forward(self, x, u, sigma=.1):
+        return self.A @ x + self.B @ u + np.random.normal(np.zeros(len(x)), scale=sigma)
 
     def step():
         pass
