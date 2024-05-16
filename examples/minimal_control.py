@@ -1,9 +1,11 @@
 import logging
 from typing import List
 import numpy as np
+import matplotlib.pyplot as plt
 
 from hybrid_control.environments.library import get_three_region_env
 from hybrid_control.controller import Controller
+from hybrid_control.plotting.utils import plot_suite
 
 logging.basicConfig(level=logging.INFO)
 
@@ -25,7 +27,7 @@ def estimated_system_params(env):
 
 
 if __name__ == "__main__":
-    ENV_STEPS = 10
+    ENV_STEPS = 50
 
     env = get_three_region_env(0, 0, 5)
 
@@ -41,13 +43,25 @@ if __name__ == "__main__":
     action = p_0(env)
 
     obs = []
+    actions = []
+    discrete_actions = []
     for i in range(ENV_STEPS):
         observation, reward, terminated, truncated, info = env.step(action)
-        obs.append(observation)
 
+        obs.append(observation)
+        actions.append(action)
+        discrete_actions.append(controller.discrete_action)
+        
         action = controller.policy(observation, action)
 
 
+    plot_suite(
+        controller,
+        np.stack(obs),
+        np.stack(actions),
+        discrete_actions=discrete_actions,
+    )
+    plt.show()
     # Simple report
     from hybrid_control.logisitc_reg import mode_posterior
     W = np.block([[linear.w] for linear in env.linear_systems])

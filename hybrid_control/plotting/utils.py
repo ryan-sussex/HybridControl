@@ -115,7 +115,7 @@ def plot_actions(
             color=color,
             alpha=alpha,
         )
-    ax.legend([str(i) for i in range(controller.n_modes)])
+    ax.legend([f"Go to {i}" for i in range(controller.n_modes)])
     ax.set_xlim(xlim)
     ax.set_ylim(ylim)
     ax.set_title("Action applied dims(0,1)")
@@ -169,6 +169,14 @@ def get_lims(x, scale=0.5):
     return xlim, ylim
 
 
+def get_chunk(obs, actions, discrete_actions, start=0, end=-1):
+    obs = obs[start:end]
+    actions = actions[start:end]
+    if discrete_actions is not None:
+        discrete_actions = discrete_actions[start:end]
+    return obs, actions, discrete_actions
+
+
 def plot_overlapped(
     controller: Controller,
     obs: np.ndarray,
@@ -180,10 +188,9 @@ def plot_overlapped(
     xlim=None,
     ylim=None,
 ):
-    print(start, end)
-    obs = obs[start:end]
-    actions = actions[start:end]
-    discrete_actions = discrete_actions[start:end]
+    obs, actions, discrete_actions = get_chunk(
+        obs, actions, discrete_actions, start=start, end=end
+    )
 
     if xlim is None:
         xlim, ylim = get_lims(obs)
@@ -213,18 +220,13 @@ def plot_multiple_overlapped(
 ):
     _, axs = plt.subplots(nrows=1, ncols=5, sharex=True, sharey=True)
     n_plots = len(axs) + 1
-    print(n_plots)
-    chunksize = 2 * int((len(obs) - 1) / n_plots)
-    print(chunksize)
+    chunksize = int((len(obs) - 1) / n_plots)
     # raise
     xlim, ylim = get_lims(obs)
 
     start = 0
     end = chunksize
     for i, ax in enumerate(axs):
-        print(ax)
-        start += int(chunksize / 2)
-        end += int(chunksize / 2)
         print(start, end)
         plot_overlapped(
             controller,
@@ -237,6 +239,8 @@ def plot_multiple_overlapped(
             ylim=ylim,
             discrete_actions=discrete_actions,
         )
+        start += int(chunksize)
+        end += int(chunksize)
     return
 
 
@@ -281,7 +285,13 @@ def plot_suite(
     obs: np.ndarray,
     actions: np.ndarray,
     discrete_actions: Optional[List[int]] = None,
+    start=0,
+    end=-1,
 ):
+    obs, actions, discrete_actions = get_chunk(
+        obs, actions, discrete_actions, start=start, end=end
+    )
+
     if controller.obs_dim < 2:
         return
     plot_multiple_overlapped(

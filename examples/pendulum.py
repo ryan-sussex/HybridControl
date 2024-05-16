@@ -39,8 +39,8 @@ def preprocess(obs: np.ndarray, polar=True):
 
 if __name__ == "__main__":
     POLAR = True
-    ENV_STEPS = 500
-    REFIT_EVERY = 100
+    ENV_STEPS = 2000
+    REFIT_EVERY = 500
 
     env = gym.make("Pendulum-v1", g=9.81, render_mode="rgb_array")
     env.reset()
@@ -60,16 +60,17 @@ if __name__ == "__main__":
     frames = []
     for i in range(ENV_STEPS):
         observation, reward, terminated, truncated, info = env.step(action)
-        observation = preprocess(observation)
+        observation = preprocess(observation, polar=POLAR)
         frames.append(env.render())
 
         if terminated or truncated:
             observation, info = env.reset()
-            observation = preprocess(observation)
+            observation = preprocess(observation, polar=POLAR)
 
         obs.append(observation)
         actions.append(action)
         discrete_actions.append(controller.discrete_action)
+        
         action = controller.policy(observation, action)
 
         if i % REFIT_EVERY == REFIT_EVERY - 1:
@@ -80,6 +81,7 @@ if __name__ == "__main__":
                     np.stack(obs),
                     np.stack(actions),
                     discrete_actions=discrete_actions,
+                    start=i + 1 - REFIT_EVERY,
                 )
                 plt.show()
                 controller = controller.estimate_and_identify(
