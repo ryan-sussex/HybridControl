@@ -1,6 +1,8 @@
 import logging
 import numpy as np
 from pymdp.maths import softmax as sm
+import math
+
 
 from hybrid_control.lqr import get_trajectory_cost
 
@@ -42,7 +44,7 @@ def get_cost_matrix(adj, priors, As, Bs, Q, R, bs):
     costs_matrix = costs_matrix * -1
     
     # make impossible costs high
-    #costs_matrix[costs_matrix==0] = -100000
+    # costs_matrix[costs_matrix==0] = -10000
 
     return costs_matrix
 
@@ -172,7 +174,7 @@ def cost_per_policy(B, cost_matrix, policy, init_state):
     return policy_cost
 
 
-def get_prior_over_policies(agent, cost_matrix, idx_mode, alpha=0.0001):
+def get_prior_over_policies(agent, cost_matrix, idx_mode):
     """
     Parameters
     ----------
@@ -190,7 +192,7 @@ def get_prior_over_policies(agent, cost_matrix, idx_mode, alpha=0.0001):
     P_pi : array
         Probability distribution over policies weighted by their control cost
     """
-
+    
     # get control costs for each policy by indexing i for current state, j for policy action
     pi_costs = np.zeros(
         len(agent.policies),
@@ -201,8 +203,16 @@ def get_prior_over_policies(agent, cost_matrix, idx_mode, alpha=0.0001):
         pi_costs[i] = cost_per_policy(
             agent.B, cost_matrix, policy=policy_i, init_state=idx_mode
         )
+        
+    # # get appropriate alpha value
+    largest_value = np.min(pi_costs) * -1
+    order_mag = math.floor(math.log(largest_value, 10))
+    alpha = alpha = 10 ** -order_mag
 
     # softmax with temperature parameter (alpha = 1/T)
     P_pi = sm(pi_costs * alpha)
 
     return P_pi
+
+
+# alpha = 0.0001
