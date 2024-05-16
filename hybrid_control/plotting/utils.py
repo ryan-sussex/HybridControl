@@ -106,7 +106,6 @@ def plot_actions(
         color = colors[k % len(colors)]
         if discrete_actions is not None:
             color = [colors[i % len(colors)] for i in discrete_actions if i == k]
-            print(len(color))
 
         ax.quiver(
             obs[zk, 0],
@@ -174,17 +173,23 @@ def plot_overlapped(
     controller: Controller,
     obs: np.ndarray,
     actions: np.ndarray,
-    end=None,
-    discrete_actions=Optional[List[int]],
+    start=0,
+    end=-1,
+    discrete_actions: Optional[List[int]] = None,
+    ax=None,
+    xlim=None,
+    ylim=None,
 ):
-    if end is not None:
-        obs = obs[:end]
-        actions = actions[:end]
+    print(start, end)
+    obs = obs[start:end]
+    actions = actions[start:end]
+    discrete_actions = discrete_actions[start:end]
 
-    xlim, ylim = get_lims(obs)
+    if xlim is None:
+        xlim, ylim = get_lims(obs)
 
     ax = plot_most_likely_dynamics(
-        controller, alpha=0.2, xlim=xlim, ylim=ylim, at_state=obs[0]
+        controller, alpha=0.4, xlim=xlim, ylim=ylim, at_state=obs[0], ax=ax
     )
     plot_trajectory(controller, obs, actions, ax=ax, xlim=xlim, ylim=ylim)
     plot_actions(
@@ -197,6 +202,41 @@ def plot_overlapped(
         ylim=ylim,
         discrete_actions=discrete_actions,
     )
+    return ax
+
+
+def plot_multiple_overlapped(
+    controller: Controller,
+    obs: np.ndarray,
+    actions: np.ndarray,
+    discrete_actions=Optional[List[int]],
+):
+    _, axs = plt.subplots(nrows=1, ncols=5, sharex=True, sharey=True)
+    n_plots = len(axs) + 1
+    print(n_plots)
+    chunksize = 2 * int((len(obs) - 1) / n_plots)
+    print(chunksize)
+    # raise
+    xlim, ylim = get_lims(obs)
+
+    start = 0
+    end = chunksize
+    for i, ax in enumerate(axs):
+        print(ax)
+        start += int(chunksize / 2)
+        end += int(chunksize / 2)
+        print(start, end)
+        plot_overlapped(
+            controller,
+            obs,
+            actions,
+            start=start,
+            end=end,
+            ax=ax,
+            xlim=xlim,
+            ylim=ylim,
+            discrete_actions=discrete_actions,
+        )
     return
 
 
@@ -244,6 +284,10 @@ def plot_suite(
 ):
     if controller.obs_dim < 2:
         return
+    plot_multiple_overlapped(
+        controller, obs, actions, discrete_actions=discrete_actions
+    )
+
     plot_overlapped(
         controller, obs, actions, end=100, discrete_actions=discrete_actions
     )

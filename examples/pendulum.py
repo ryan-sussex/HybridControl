@@ -39,7 +39,7 @@ def preprocess(obs: np.ndarray, polar=True):
 
 if __name__ == "__main__":
     POLAR = True
-    ENV_STEPS = 2000
+    ENV_STEPS = 500
     REFIT_EVERY = 100
 
     env = gym.make("Pendulum-v1", g=9.81, render_mode="rgb_array")
