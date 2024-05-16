@@ -50,9 +50,6 @@ if __name__ == "__main__":
     
     traj = []
     
-    temp_1 = controller.agent.pB[0].copy()
-
-    
     for i in range(ENV_STEPS):
         
         observation, reward, terminated, truncated, info = env.step(action)
@@ -62,4 +59,3 @@ if __name__ == "__main__":
 
         action = controller.policy(observation)
         
-    temp_2 =  controller.agent.pB[0]
