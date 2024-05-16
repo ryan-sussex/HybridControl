@@ -119,29 +119,24 @@ def create_A(num_obs, num_states, state_modes, obs_modes):
 
 def create_B(adj, mode_action_names, num_states):
     """Take each row and extend for a discrete action"""
-
+    prob = 0.8 # confidence in allowed transitions
     B = utils.initialize_empty_B(num_states, num_states)
-    T = adj_to_transition(adj)  # without control cost #is as expected w/ ryan adj
-    # T = control_cost_prior(adj) # control cost prior
-
-    for i in range(T.shape[1]):  # for each row
-        B[0][:, :, i][i] = T[i] * 1 / T[i]  # without control cost
-        # B[0][:, :, i][i] = T[i] # control cost prior
-        B[0][np.isnan(B[0])] = 0
-
-    # identify any columns of zeros in each slice
-    # .........not necessarily col of zeros but col that doesnt sum to 1
-    # get all of the neighbouring nodes to that 0 column node
-    # and set the transition probs as uniformly going to neighbouring nodes instead
-    for i in range(T.shape[1]):
-        for j in range(T.shape[0]):  # T.shape[0] should be len of columns
-            if np.array_equal(B[0][:, j, i], np.zeros(T.shape[1])):
-                # B[0][:,j,i] = adj[:,j]/np.sum(adj[:,j], axis=0)
-                B[0][:, j, i] = adj[j, :] / np.sum(
-                    adj[j, :], axis=0
-                )  # without control cost
-                # B[0][:,j,i] = T[:,j]/np.sum(T[:,j], axis=0) # for cc stuff
-
+    T = adj_to_transition(adj)
+    
+    # for each slice of the matrix
+    for i in range(B[0].shape[2]):  
+        # add the relevant row of the adjacency matrix
+        B[0][:, :, i][i] += prob * adj[i]
+        # for each row of the slice
+        for j in range(B[0][:, :, i].shape[0]):
+            # make the zero values instead equal to (1-prob)
+            B[0][:,j,i][B[0][:,j,i]==0] = (1-prob)/B[0][:,j,i][B[0][:,j,i]==0].shape[0] 
+        # make sure disallowed transitions are set back zero
+        B[0][:, :, i][i] *= adj[i] 
+        # make sure each column is normalised to sum to 1 
+        for k in range(B[0][:, :, i].shape[1]): 
+            B[0][:, k, i] = B[0][:, k, i]/np.sum(B[0][:, k, i])
+    
     return B
 
 
@@ -175,6 +170,8 @@ def construct_agent(adj: np.ndarray) -> Agent:
     A = create_A(num_obs, num_states, state_modes, obs_modes)
     B = create_B(adj, mode_action_names, num_states)
     pB = utils.dirichlet_like(B,scale=1)
+    pB.any()[pB.any()==0.5] = 1e6 # make impossible transitions unlearnable 
+    # pB.any()[pB.any()==0.] = 1e8 # make impossible transitions unlearnable 
     # create prior preferences
 
     # rew_idx = 1  # TODO: replace, index of the rewarding observation

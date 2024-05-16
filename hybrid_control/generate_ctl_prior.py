@@ -54,7 +54,8 @@ def generate_prior(
         a = np.dot(W, x) + r
         P = softmax(a)
         ez = np.eye(P.shape[0])[z]
-        partial_P = W.T @ (ez - P)
+        partial_P = W.T @ (P[z]*(ez - P))
+        # partial_P = W.T @ (ez - P)
 
         x_new = x + lr * partial_P
         x = x_new
