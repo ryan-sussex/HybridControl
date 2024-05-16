@@ -33,7 +33,7 @@ def estimated_system_params(env):
 
 
 if __name__ == "__main__":
-    ENV_STEPS = 50
+    ENV_STEPS = 5
 
     env = get_three_region_env(0, 0, 5)
 
@@ -50,12 +50,16 @@ if __name__ == "__main__":
     
     traj = []
     
+    temp_1 = controller.agent.pB[0].copy()
+
+    
     for i in range(ENV_STEPS):
         
         observation, reward, terminated, truncated, info = env.step(action)
+        print(controller.agent.pB)
             
         traj.append(observation)
 
         action = controller.policy(observation)
         
-        init_step = False
+    temp_2 =  controller.agent.pB[0]
