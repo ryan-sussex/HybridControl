@@ -17,7 +17,7 @@ logging.basicConfig(level=logging.INFO)
 
 
 if __name__ == "__main__":
-    ENV_STEPS = 1000
+    ENV_STEPS = 10000
     REFIT_EVERY = 200
 
     env = gym.make('MountainCarContinuous-v0', render_mode="rgb_array")
@@ -41,6 +41,8 @@ if __name__ == "__main__":
         frames.append(env.render())
 
         if terminated or truncated:
+            if terminated > 0:
+                action = controller.policy(observation, action, reward) # Here to make sure reward loc is updated
             observation, info = env.reset()
 
         obs.append(observation)

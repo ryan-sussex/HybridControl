@@ -52,7 +52,7 @@ class Controller:
             bs = [np.zeros((self.obs_dim)) for _ in range(self.n_modes)]
 
         self.mode_priors = generate_all_priors(W_x, b)
-        self.cts_ctrs = get_all_cts_controllers(As, Bs, self.mode_priors)
+        self.cts_ctrs = get_all_cts_controllers(As, Bs, bs, self.mode_priors)
 
         self.As = As
         self.Bs = Bs
@@ -65,9 +65,11 @@ class Controller:
         self.reward_pos_cts = reward_pos_cts
         self.reward_pos_dsc = self._get_reward_idx(reward_pos_cts)
         self.max_reward = max_reward
-        self.final_controller = get_final_controller(
-            As, Bs,  self.reward_pos_cts, self.reward_pos_dsc
-        )
+        self.final_controller = None
+        if self.reward_pos_cts is not None:
+            self.final_controller = get_final_controller(
+                As, Bs, bs, self.reward_pos_cts, self.reward_pos_dsc
+            )
 
         self.adj = extract_adjacency(W_x=W_x, W_u=W_u, b=b)
         self.agent = get_discrete_controller(self.adj, self.reward_pos_dsc)
@@ -116,6 +118,10 @@ class Controller:
             )
             logger.info("Resetting active inference with new objective")
             self.agent = get_discrete_controller(self.adj, self.reward_pos_dsc)
+            self.final_controller = get_final_controller(
+                self.As, self.Bs, self.bs, self.reward_pos_cts, self.reward_pos_dsc
+            )
+            # TODO: convert reward to propertty with setter methods
         return
 
     def policy(
@@ -138,9 +144,6 @@ class Controller:
         probs = self.mode_posterior(observation, action)
         idx_mode = np.argmax(probs)
 
-        if idx_mode == self.reward_pos_dsc:
-            logger.info("Attempting to stabilise at max reward")
-
         if idx_mode == self.discrete_action:
             logger.info(
                 f"  Discrete Goal {self.agent.mode_action_names[self.discrete_action]} Achieved!"
@@ -157,7 +160,7 @@ class Controller:
         cts_prior = self.mode_priors[discrete_action]
         self.discrete_action = discrete_action  # For debugging
         logger.info(f"  Aiming for {cts_prior}")
-        logger.info(f"  max reward @ {self.reward_pos_dsc}")
+        logger.info(f"  max reward @ {self.reward_pos_dsc} @ {self.reward_pos_cts}")
 
 
         if (idx_mode == self.reward_pos_dsc) and (discrete_action == idx_mode):
@@ -209,32 +212,33 @@ def get_default_lqr_costs(obs_dims, action_dims):
     return dict(Q=np.eye(obs_dims) * 100, R=np.eye(action_dims))  # TODO: Magic numbers
 
 
-def get_cts_controller(As, Bs, i: int, j: int, mode_priors: List):
+def get_cts_controller(As, Bs, bs, i: int, j: int, mode_priors: List):
     """
     Constructs the controller for traversing region i to reach goal j
     """
     lc = LinearController(
-        As[i], Bs[i], **get_default_lqr_costs(As[i].shape[0], Bs[i].shape[1])
+        As[i], Bs[i], b=bs[i], **get_default_lqr_costs(As[i].shape[0], Bs[i].shape[1])
     )
     return convert_to_servo(lc, mode_priors[j])
 
 
-def get_all_cts_controllers(As, Bs, mode_priors: List):
+def get_all_cts_controllers(As, Bs, bs, mode_priors: List):
     """
     Returns list of lists, where element list[i][j] is the controller
     for going from region i, to the prior specified by mode_prior[j]
     """
     n_modes = len(mode_priors)
     return [
-        [get_cts_controller(As, Bs, i, j, mode_priors) for i in range(n_modes)]
+        [get_cts_controller(As, Bs, bs, i, j, mode_priors) for i in range(n_modes)]
         for j in range(n_modes)
     ]
 
 
-def get_final_controller(As, Bs, reward_pos_cts, reward_pos_discrete):
+def get_final_controller(As, Bs, bs, reward_pos_cts, reward_pos_discrete):
     lc = LinearController(
         As[reward_pos_discrete],
         Bs[reward_pos_discrete],
+        # b=bs[reward_pos_discrete],
         **get_default_lqr_costs(
             As[reward_pos_discrete].shape[0], Bs[reward_pos_discrete].shape[1]
         ),
