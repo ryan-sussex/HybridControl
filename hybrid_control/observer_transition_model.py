@@ -170,8 +170,7 @@ def construct_agent(adj: np.ndarray) -> Agent:
     A = create_A(num_obs, num_states, state_modes, obs_modes)
     B = create_B(adj, mode_action_names, num_states)
     pB = utils.dirichlet_like(B,scale=1)
-    pB.any()[pB.any()==0.5] = 1e80 # make impossible transitions unlearnable 
-    # pB.any()[pB.any()==0.] = 1e20 # make impossible transitions unlearnable 
+    pB.any()[pB.any()==0.5] = 1e10 # make impossible transitions unlearnable 
     # create prior preferences
 
     # rew_idx = 1  # TODO: replace, index of the rewarding observation
