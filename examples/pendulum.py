@@ -71,7 +71,7 @@ if __name__ == "__main__":
         actions.append(action)
         discrete_actions.append(controller.discrete_action)
         
-        action = controller.policy(observation, action)
+        action = controller.policy(observation, action, reward)
 
         if i % REFIT_EVERY == REFIT_EVERY - 1:
             create_video(frames, 60, "./video/out")

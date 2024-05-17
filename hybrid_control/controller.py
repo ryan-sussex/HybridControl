@@ -28,6 +28,8 @@ class Controller:
         W_x: np.ndarray,
         b: np.ndarray,
         rslds: Optional[SLDS] = None,
+        reward_pos_cts: Optional[np.ndarray] = None,
+        max_reward: Optional[float] = None,
     ):
         """
         Parameters
@@ -60,8 +62,15 @@ class Controller:
         self.W_u = W_u
         self.b = b
 
+        self.reward_pos_cts = reward_pos_cts
+        self.reward_pos_dsc = self._get_reward_idx(reward_pos_cts)
+        self.max_reward = max_reward
+        self.final_controller = get_final_controller(
+            As, Bs,  self.reward_pos_cts, self.reward_pos_dsc
+        )
+
         self.adj = extract_adjacency(W_x=W_x, W_u=W_u, b=b)
-        self.agent = get_discrete_controller(self.adj)
+        self.agent = get_discrete_controller(self.adj, self.reward_pos_dsc)
         self.cost_matrix = get_cost_matrix(
             self.adj,
             self.mode_priors,
@@ -82,10 +91,38 @@ class Controller:
             action = np.zeros(self.action_dim)
         return mode_posterior(observation, action, self.W_x, self.W_u, self.b)
 
+    def _get_reward_idx(
+        self, reward_pos: Optional[np.ndarray], action: Optional[np.ndarray] = None
+    ):
+        if reward_pos is None:
+            return None
+        return np.argmax(self.mode_posterior(reward_pos), action)
+
+    def _check_and_update_reward(
+        self,
+        observation: Optional[np.ndarray] = None,
+        action: Optional[np.ndarray] = None,
+        reward: Optional[np.ndarray] = None,
+    ):
+        logger.debug("  checking reward..")
+        if (self.max_reward is None) or (reward > self.max_reward):
+            self.max_reward = reward
+            self.reward_pos_cts = observation
+            self.reward_pos_dsc = np.argmax(self.mode_posterior(observation, action))
+            logger.info(
+                f"Found larger reward:{self.max_reward}, "
+                f"at continuous:{self.reward_pos_cts} "
+                f"and discrete:{self.reward_pos_dsc}"
+            )
+            logger.info("Resetting active inference with new objective")
+            self.agent = get_discrete_controller(self.adj, self.reward_pos_dsc)
+        return
+
     def policy(
         self,
         observation: Optional[np.ndarray] = None,
         action: Optional[np.ndarray] = None,
+        reward: Optional[np.ndarray] = None,
     ):
         """
         Takes a continuous observation, outputs continuous action.
@@ -95,10 +132,15 @@ class Controller:
             logger.info("No observation, returning default action.")
             return self.p_0(self.action_dim)
 
+        if reward is not None:
+            self._check_and_update_reward(observation, action, reward)
+
         probs = self.mode_posterior(observation, action)
         idx_mode = np.argmax(probs)
-        mode = np.eye(len(probs))[idx_mode]  # one-hot rep
-        goal_achieved = idx_mode == self.discrete_action
+
+        if idx_mode == self.reward_pos_dsc:
+            logger.info("Attempting to stabilise at max reward")
+
         if idx_mode == self.discrete_action:
             logger.info(
                 f"  Discrete Goal {self.agent.mode_action_names[self.discrete_action]} Achieved!"
@@ -108,18 +150,24 @@ class Controller:
         logger.info(f"  Inferred mode {idx_mode}")
 
         # Discrete
-        self.agent.E = get_prior_over_policies(self.adj,
-            self.agent, self.cost_matrix, idx_mode
+        self.agent.E = get_prior_over_policies(
+            self.adj, self.agent, self.cost_matrix, idx_mode
         )
         self.agent, discrete_action = otm.step_active_inf_agent(self.agent, obs)
         cts_prior = self.mode_priors[discrete_action]
         self.discrete_action = discrete_action  # For debugging
         logger.info(f"  Aiming for {cts_prior}")
+        logger.info(f"  max reward @ {self.reward_pos_dsc}")
+
+
+        if (idx_mode == self.reward_pos_dsc) and (discrete_action == idx_mode):
+            logger.info("Attempting to stabilise at max reward")
+            return self.final_controller.finite_horizon(observation, t=0, T=100)
 
         # Continuous
         cts_ctr = self.cts_ctrs[discrete_action][idx_mode]
-        x_bar = np.r_[observation - cts_prior, 1]  # internal coords TODO: simplify this
-        action = cts_ctr.finite_horizon(x_bar, t=0, T=100)  # TODO: magic numbers
+        # x_bar = np.r_[observation - cts_prior, 1]  # internal coords TODO: simplify this
+        action = cts_ctr.finite_horizon(observation, t=0, T=100)  # TODO: magic numbers
         logger.info(" ..Returning action")
         return action
 
@@ -140,11 +188,16 @@ class Controller:
 
     def estimate_and_identify(self, obs, actions, **kwargs):
         param_dct = self.estimate(obs, actions, rslds=self._rslds, **kwargs)
-        return Controller(**param_dct, rslds=self._rslds)
+        return Controller(
+            **param_dct,
+            rslds=self._rslds,
+            reward_pos_cts=self.reward_pos_cts,
+            max_reward=self.max_reward,
+        )
 
 
-def get_discrete_controller(adj):
-    return otm.construct_agent(adj)
+def get_discrete_controller(adj, rwd_idx: Optional[int]):
+    return otm.construct_agent(adj, rwd_idx=rwd_idx)
 
 
 def get_default_lqr_costs(obs_dims, action_dims):
@@ -160,7 +213,6 @@ def get_cts_controller(As, Bs, i: int, j: int, mode_priors: List):
     """
     Constructs the controller for traversing region i to reach goal j
     """
-    print(Bs[i].shape)
     lc = LinearController(
         As[i], Bs[i], **get_default_lqr_costs(As[i].shape[0], Bs[i].shape[1])
     )
@@ -177,6 +229,17 @@ def get_all_cts_controllers(As, Bs, mode_priors: List):
         [get_cts_controller(As, Bs, i, j, mode_priors) for i in range(n_modes)]
         for j in range(n_modes)
     ]
+
+
+def get_final_controller(As, Bs, reward_pos_cts, reward_pos_discrete):
+    lc = LinearController(
+        As[reward_pos_discrete],
+        Bs[reward_pos_discrete],
+        **get_default_lqr_costs(
+            As[reward_pos_discrete].shape[0], Bs[reward_pos_discrete].shape[1]
+        ),
+    )
+    return convert_to_servo(lc, reward_pos_cts)
 
 
 def estimated_system_params(rslds: SLDS):
