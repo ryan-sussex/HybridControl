@@ -82,13 +82,13 @@ if __name__ == "__main__":
         action = controller.policy(observation, action)
 
 
-    # plot_suite(
-    #     controller,
-    #     np.stack(obs),
-    #     np.stack(actions),
-    #     discrete_actions=discrete_actions,
-    # )
-    # plt.show()
+    plot_suite(
+        controller,
+        np.stack(obs),
+        np.stack(actions),
+        discrete_actions=discrete_actions,
+    )
+    plt.show()
     
     # Simple report
     from hybrid_control.logisitc_reg import mode_posterior

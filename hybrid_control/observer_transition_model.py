@@ -261,11 +261,7 @@ def step_active_inf_agent(adj, idx_mode, agent: Agent, obs: np.ndarray):
 
     agent.q_pi = clean_q_pi(q_pi, adj, idx_mode, agent)
        
-    plot_efe(efe, q_pi, agent.E, utility, state_ig, param_ig)
-
-    # q_pi, efe = agent.infer_policies()
-    # plot_efe(efe, q_pi, E = agent.E)
-
+    # plot_efe(efe, q_pi, agent.E, utility, state_ig, param_ig)
     chosen_action_id = agent.sample_action()
 
     movement_id = int(
