@@ -5,7 +5,7 @@ import seaborn as sns
 import networkx as nx
 
 from hybrid_control.controller import Controller
-
+from hybrid_control.observer_transition_model import clean_q_pi
 
 color_names = ["windows blue", "red", "amber", "faded green", "purple", "grey"]
 colors = sns.xkcd_palette(color_names)
@@ -277,6 +277,31 @@ def draw_cost_graph(controller: Controller):
     return
 
     # Show plot
+def _plot_efe(efe, q_pi, E, utility=None, state_ig=None, param_ig=None, ax=None):
+    if ax is None:
+        fig = plt.figure(figsize=FIGSIZE)
+        ax = fig.add_subplot(111)
+    # plt.plot(efe, label='efe') 
+    ax.plot(q_pi, label = 'q_pi')
+    ax.plot(E, label='E vector')
+    # if utility is not None:
+    #     ax.plot(utility, label='util')
+    if state_ig is not None:
+        ax.plot(state_ig, label='sig')
+    if param_ig is not None:
+        ax.plot(param_ig, label='pig')
+    ax.set_title('Components of EFE')
+    ax.legend()
+
+
+def plot_efe(controller: Controller):
+    _, axs = plt.subplots(nrows=1, ncols=controller.n_modes, sharex=True, sharey=True)
+    q_pi, efe, utility, state_ig, param_ig = controller.agent.infer_policies_expand_G()
+    for idx_mode, ax in enumerate(axs):
+        q_pi = clean_q_pi(q_pi, controller.adj, idx_mode, controller.agent)
+        _plot_efe(efe, q_pi, controller.agent.E, utility, state_ig, param_ig, ax=ax)
+        ax.set_title(f"Components of EFE for mode {idx_mode}")
+
 
 
 def plot_suite(
@@ -316,6 +341,8 @@ def plot_suite(
     # Graphs
     draw_mode_graph(controller)
     draw_cost_graph(controller)
+    # EFE
+    plot_efe(controller)
     return
 
 
