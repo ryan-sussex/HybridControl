@@ -27,6 +27,7 @@ class Controller:
         W_u: np.ndarray,
         W_x: np.ndarray,
         b: np.ndarray,
+        rslds: Optional[SLDS] = None,
     ):
         """
         Parameters
@@ -50,11 +51,11 @@ class Controller:
 
         self.mode_priors = generate_all_priors(W_x, b)
         self.cts_ctrs = get_all_cts_controllers(As, Bs, self.mode_priors)
-        
+
         self.As = As
         self.Bs = Bs
         self.bs = bs
-        
+
         self.W_x = W_x
         self.W_u = W_u
         self.b = b
@@ -67,9 +68,10 @@ class Controller:
             As,
             Bs,
             **get_default_lqr_costs(self.obs_dim, self.action_dim),
-            bs=bs
+            bs=bs,
         )
         self.discrete_action = 0
+        self._rslds: Optional[SLDS] = rslds  # Store rslds for convenicence
 
     def mode_posterior(self, observation, action: Optional[np.ndarray] = None):
         if action is None:
@@ -81,13 +83,14 @@ class Controller:
         return mode_posterior(observation, action, self.W_x, self.W_u, self.b)
 
     def policy(
-            self,
-            observation: Optional[np.ndarray] = None,
-            action: Optional[np.ndarray] = None,
+        self,
+        observation: Optional[np.ndarray] = None,
+        action: Optional[np.ndarray] = None,
     ):
         """
         Takes a continuous observation, outputs continuous action.
         """
+        logger.info("Executing policy..")
         if observation is None:
             logger.info("No observation, returning default action.")
             return self.p_0(self.action_dim)
@@ -95,9 +98,14 @@ class Controller:
         probs = self.mode_posterior(observation, action)
         idx_mode = np.argmax(probs)
         mode = np.eye(len(probs))[idx_mode]  # one-hot rep
-        
+        goal_achieved = idx_mode == self.discrete_action
+        if idx_mode == self.discrete_action:
+            logger.info(
+                f"  Discrete Goal {self.agent.mode_action_names[self.discrete_action]} Achieved!"
+            )
+
         obs = pu.to_obj_array(probs)
-        logger.debug(f"Inferred mode {mode}")
+        logger.info(f"  Inferred mode {idx_mode}")
 
         # Discrete
         self.agent.E = get_prior_over_policies(self.adj,
@@ -106,12 +114,13 @@ class Controller:
         self.agent, discrete_action = otm.step_active_inf_agent(self.agent, obs)
         cts_prior = self.mode_priors[discrete_action]
         self.discrete_action = discrete_action  # For debugging
-        logger.info(f"Aiming for {cts_prior}")
+        logger.info(f"  Aiming for {cts_prior}")
 
         # Continuous
         cts_ctr = self.cts_ctrs[discrete_action][idx_mode]
         x_bar = np.r_[observation - cts_prior, 1]  # internal coords TODO: simplify this
         action = cts_ctr.finite_horizon(x_bar, t=0, T=100)  # TODO: magic numbers
+        logger.info(" ..Returning action")
         return action
 
     @staticmethod
@@ -126,11 +135,12 @@ class Controller:
         rslds = _estimate(
             obs, actions, self.obs_dim, self.action_dim, self.n_modes, **kwargs
         )
+        self._rslds = rslds
         return estimated_system_params(rslds)
 
-    def estimate_and_identify(cls, obs, actions, **kwargs):
-        param_dct = cls.estimate(obs, actions, **kwargs)
-        return Controller(**param_dct)
+    def estimate_and_identify(self, obs, actions, **kwargs):
+        param_dct = self.estimate(obs, actions, rslds=self._rslds, **kwargs)
+        return Controller(**param_dct, rslds=self._rslds)
 
 
 def get_discrete_controller(adj):
@@ -170,9 +180,6 @@ def get_all_cts_controllers(As, Bs, mode_priors: List):
 
 
 def estimated_system_params(rslds: SLDS):
-    """
-    Warning! Passed env for simulation, real model does not have access
-    """
     dynamic_params = rslds.dynamics.params
     emission_params = rslds.emissions.params
     softmax_params = rslds.transitions.params
@@ -184,19 +191,33 @@ def estimated_system_params(rslds: SLDS):
     return dict(W_u=W_u, W_x=W_x, b=b, As=As, Bs=Bs, bs=bs)
 
 
-def _estimate(obs, actions, d_obs, d_actions, k_components, n_iters: int = 100) -> SLDS:
-    rslds = SLDS(
-        d_obs,
-        k_components,
-        d_obs,
-        M=d_actions,  # Control dim
-        transitions="recurrent_only",
-        dynamics="diagonal_gaussian",
-        emissions="gaussian_id",
-        single_subspace=True,
-    )
+def _estimate(
+    obs,
+    actions,
+    d_obs,
+    d_actions,
+    k_components,
+    n_iters: int = 100,
+    rslds: Optional[SLDS] = None,
+) -> SLDS:
+    """
+    Fits an RSLDS, if rslds is passed will just call fit function,
+    otherwise randomly reinitalise
+    """
+    if rslds is None:
+        logger.info("No existing RSLDS found, initialising..")
+        rslds = SLDS(
+            d_obs,
+            k_components,
+            d_obs,
+            M=d_actions,  # Control dim
+            transitions="recurrent_only",
+            dynamics="diagonal_gaussian",
+            emissions="gaussian_id",
+            single_subspace=True,
+        )
 
-    rslds.initialize(obs, inputs=actions)
+        rslds.initialize(obs, inputs=actions)
 
     q_elbos, q = rslds.fit(
         obs,
@@ -227,4 +248,4 @@ def get_initial_controller(d_obs, d_actions, k_components):
         emissions="gaussian_id",
         single_subspace=True,
     )
-    return Controller(**estimated_system_params(rslds))
+    return Controller(**estimated_system_params(rslds), rslds=rslds)
