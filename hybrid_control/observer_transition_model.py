@@ -268,7 +268,11 @@ def step_active_inf_agent(adj, idx_mode, agent: Agent, obs: np.ndarray):
     agent.q_pi = clean_q_pi(q_pi, adj, idx_mode, agent)
        
     # plot_efe(efe, q_pi, agent.E, utility, state_ig, param_ig)
-    chosen_action_id = agent.sample_action()
+    try:
+        chosen_action_id = agent.sample_action()
+    except Exception as e:
+        logger.warn(e, exc_info=True)
+        chosen_action_id = 0    # TODO: figure out why Nans appear
 
     movement_id = int(
         chosen_action_id[0]
