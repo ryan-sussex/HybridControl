@@ -26,7 +26,30 @@ def estimated_system_params(env):
     return W, b, As, Bs
 
 
+def plot_tensor_heatmap(tensor, axis=2):
+    """
+    Plots heatmaps for each slice of the given tensor along the specified axis.
+    
+    Parameters:
+    tensor (numpy array): The 3D tensor to be plotted.
+    axis (int): The axis along which to slice the tensor. Default is 0.
+    """
+    # Rearrange the tensor so that the specified axis is the first axis
+    tensor = np.moveaxis(tensor, axis, 0)
+    
+    num_slices = tensor.shape[0]
+    
+    for i in range(num_slices):
+        plt.figure(figsize=(8, 6))
+        plt.imshow(tensor[i], cmap='viridis', interpolation='nearest')
+        plt.colorbar()
+        plt.title(f'action Go-to {i}')
+        plt.xlabel('Columns')
+        plt.ylabel('Rows')
+        plt.show()
+
 if __name__ == "__main__":
+    # ENV_STEPS = 50
     ENV_STEPS = 50
 
     env = get_three_region_env(0, 0, 5)
@@ -46,6 +69,10 @@ if __name__ == "__main__":
     actions = []
     discrete_actions = []
     for i in range(ENV_STEPS):
+        
+        
+        # plot_tensor_heatmap(controller.agent.B[0])
+        
         observation, reward, terminated, truncated, info = env.step(action)
 
         obs.append(observation)
@@ -55,13 +82,14 @@ if __name__ == "__main__":
         action = controller.policy(observation, action)
 
 
-    plot_suite(
-        controller,
-        np.stack(obs),
-        np.stack(actions),
-        discrete_actions=discrete_actions,
-    )
-    plt.show()
+    # plot_suite(
+    #     controller,
+    #     np.stack(obs),
+    #     np.stack(actions),
+    #     discrete_actions=discrete_actions,
+    # )
+    # plt.show()
+    
     # Simple report
     from hybrid_control.logisitc_reg import mode_posterior
     W = np.block([[linear.w] for linear in env.linear_systems])
