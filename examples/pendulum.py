@@ -45,7 +45,7 @@ if __name__ == "__main__":
     env = gym.make("Pendulum-v1", g=9.81, render_mode="rgb_array")
     env.reset()
 
-    K = 5  # would be unknown
+    K = 3  # would be unknown
     OBS_DIM = 2 if POLAR else 3
     ACT_DIM = 1
     N_ITER = 100
@@ -75,6 +75,7 @@ if __name__ == "__main__":
 
         if i % REFIT_EVERY == REFIT_EVERY - 1:
             create_video(frames, 60, "./video/out")
+            observation, info = env.reset()
             try:
                 plot_suite(
                     controller,

@@ -23,7 +23,7 @@ if __name__ == "__main__":
     env = gym.make('MountainCarContinuous-v0', render_mode="rgb_array")
     env.reset()
     
-    K = 5  # would be unknown
+    K = 7  # would be unknown
     OBS_DIM = 2
     ACT_DIM = 1
     N_ITER = 100

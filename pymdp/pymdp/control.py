@@ -1341,12 +1341,12 @@ def select_highest(options_array):
     The highest value in the given list
     """
     options_with_idx = np.array(list(enumerate(options_array)))
+    print(options_with_idx)
     same_prob = options_with_idx[
                     abs(options_with_idx[:, 1] - np.amax(options_with_idx[:, 1])) <= 1e-8][:, 0]
     if len(same_prob) > 1:
         # If some of the most likely actions have nearly equal probability, sample from this subset of actions, instead of using argmax
         return int(same_prob[np.random.choice(len(same_prob))])
-
     return int(same_prob[0])
 
 def _select_highest_test(options_array, seed=None):

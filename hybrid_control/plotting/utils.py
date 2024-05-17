@@ -114,8 +114,9 @@ def plot_actions(
             Bu[zk, 1],
             color=color,
             alpha=alpha,
+            # label="action taken in state:"
         )
-    ax.legend([f"Go to {i}" for i in range(controller.n_modes)])
+    # ax.legend([f"Go to {i}" for i in range(controller.n_modes)])
     ax.set_xlim(xlim)
     ax.set_ylim(ylim)
     ax.set_title("Action applied dims(0,1)")
@@ -209,8 +210,27 @@ def plot_overlapped(
         ylim=ylim,
         discrete_actions=discrete_actions,
     )
+    if controller.reward_pos_cts is not None:
+        plot_reward(controller, xlim=xlim, ylim=ylim, ax=ax)
+    
+    ax.legend()
     return ax
 
+
+def plot_reward(
+    controller: Controller,
+    ax=None,
+    xlim=None,
+    ylim=None,
+):
+    if ax is None:
+        fig = plt.figure(figsize=FIGSIZE)
+        ax = fig.add_subplot(111)
+    ax.scatter(controller.reward_pos_cts[0], controller.reward_pos_cts[1], s=100, marker="v", label="Reward", )
+    ax.set_xlim(xlim)
+    ax.set_ylim(ylim)
+    ax.set_title("Trajectory dims(0,1)",)
+    return ax
 
 def plot_multiple_overlapped(
     controller: Controller,
