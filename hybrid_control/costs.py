@@ -42,9 +42,6 @@ def get_cost_matrix(adj, priors, As, Bs, Q, R, bs):
 
     # make negative
     costs_matrix = costs_matrix * -1
-    
-    # make impossible costs high
-    # costs_matrix[costs_matrix==0] = -10000
 
     return costs_matrix
 
@@ -174,7 +171,7 @@ def cost_per_policy(B, cost_matrix, policy, init_state):
     return policy_cost
 
 
-def get_prior_over_policies(agent, cost_matrix, idx_mode):
+def get_prior_over_policies(adj, agent, cost_matrix, idx_mode):
     """
     Parameters
     ----------
@@ -211,8 +208,25 @@ def get_prior_over_policies(agent, cost_matrix, idx_mode):
 
     # softmax with temperature parameter (alpha = 1/T)
     P_pi = sm(pi_costs * alpha)
+        
+    # find disallowed sequences from adj
+    null_seqs = np.argwhere(adj == 0)
+    null_seqs = null_seqs.tolist()
+    p = np.squeeze(agent.policies)
 
-    return P_pi
-
-
-# alpha = 0.0001
+    # init bool mask 
+    mask = np.zeros(p.shape[0], dtype=bool)
+    
+    # Check for disallowed sequences in policy and update the mask
+    for seq in null_seqs:
+        mask |= np.any((p[:, :-1] == seq[0]) & (p[:, 1:] == seq[1]), axis=1)
+        
+    # set prob of policies containing disallowed transitions to zero
+    P_pi[mask] = 0
+    
+    # normalise P_pi leaving zeros as zeros
+    non_zero_sum = np.sum(P_pi[P_pi != 0])
+    P_pi_norm = P_pi.copy()
+    P_pi_norm[P_pi != 0] /= non_zero_sum
+    
+    return P_pi_norm

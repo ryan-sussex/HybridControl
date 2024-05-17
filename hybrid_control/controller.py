@@ -108,7 +108,9 @@ class Controller:
         logger.info(f"  Inferred mode {idx_mode}")
 
         # Discrete
-        self.agent.E = get_prior_over_policies(self.agent, self.cost_matrix, idx_mode)
+        self.agent.E = get_prior_over_policies(self.adj,
+            self.agent, self.cost_matrix, idx_mode
+        )
         self.agent, discrete_action = otm.step_active_inf_agent(self.agent, obs)
         cts_prior = self.mode_priors[discrete_action]
         self.discrete_action = discrete_action  # For debugging
