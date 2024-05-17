@@ -170,8 +170,8 @@ def construct_agent(adj: np.ndarray) -> Agent:
     A = create_A(num_obs, num_states, state_modes, obs_modes)
     B = create_B(adj, mode_action_names, num_states)
     pB = utils.dirichlet_like(B,scale=1)
-    pB.any()[pB.any()==0.5] = 1e6 # make impossible transitions unlearnable 
-    # pB.any()[pB.any()==0.] = 1e8 # make impossible transitions unlearnable 
+    pB.any()[pB.any()==0.5] = 1e20 # make impossible transitions unlearnable 
+    # pB.any()[pB.any()==0.] = 1e20 # make impossible transitions unlearnable 
     # create prior preferences
 
     # rew_idx = 1  # TODO: replace, index of the rewarding observation
@@ -198,16 +198,17 @@ def construct_agent(adj: np.ndarray) -> Agent:
 
     return agent
 
-def plot_efe(efe, q_pi, utility=None, state_ig=None, param_ig=None, E=None):
+def plot_efe(efe, q_pi, E, utility=None, state_ig=None, param_ig=None):
     
     plt.plot(efe, label='efe') 
     plt.plot(q_pi, label = 'q_pi')
-    # print(efe)
+    plt.plot(E, label='E vector')
     if utility is not None:
         plt.plot(utility, label='util')
+    if state_ig is not None:
         plt.plot(state_ig, label='sig')
+    if param_ig is not None:
         plt.plot(param_ig, label='pig')
-        plt.plot(E, label='E vector')
     plt.title('Components of EFE')
     plt.legend()
     plt.show()
@@ -222,12 +223,12 @@ def step_active_inf_agent(agent: Agent, obs: np.ndarray):
         agent.qB = agent.update_B(agent.qs_prev)
     
     # NOTE: if plotting different components contributing to EFE, this only works 
-    # with a modification to the pymdp agent class
-    # q_pi, efe, utility, state_ig, param_ig = agent.infer_policies_expand_G()
-    # plot_efe(efe, q_pi, utility, state_ig, param_ig, agent.E)
+    # with a modified infer_policies_expand_G()
+    q_pi, efe, utility, state_ig, param_ig = agent.infer_policies_expand_G()
+    plot_efe(efe, q_pi, agent.E, utility, state_ig, param_ig)
 
-    q_pi, efe = agent.infer_policies()
-    # plot_efe(efe)
+    # q_pi, efe = agent.infer_policies()
+    # plot_efe(efe, q_pi, E = agent.E)
 
     chosen_action_id = agent.sample_action()
 
