@@ -156,7 +156,7 @@ class Controller:
         self.agent.E = get_prior_over_policies(
             self.adj, self.agent, self.cost_matrix, idx_mode
         )
-        self.agent, discrete_action = otm.step_active_inf_agent(self.agent, obs)
+        self.agent, discrete_action = otm.step_active_inf_agent(self.adj, idx_mode, self.agent, obs)
         cts_prior = self.mode_priors[discrete_action]
         self.discrete_action = discrete_action  # For debugging
         logger.info(f"  Aiming for {cts_prior}")

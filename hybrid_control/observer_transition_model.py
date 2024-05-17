@@ -178,9 +178,8 @@ def construct_agent(adj: np.ndarray, rwd_idx: Optional[int]) -> Agent:
     # create observation likelihood
     A = create_A(num_obs, num_states, state_modes, obs_modes)
     B = create_B(adj, mode_action_names, num_states)
-    pB = utils.dirichlet_like(B, scale=1)
-    pB.any()[pB.any() == 0.5] = 1e6  # make impossible transitions unlearnable
-    # pB.any()[pB.any()==0.] = 1e8 # make impossible transitions unlearnable
+    pB = utils.dirichlet_like(B,scale=1)
+    pB.any()[pB.any()==0.5] = 1e10 # make impossible transitions unlearnable 
     # create prior preferences
 
     C = create_C(num_obs, rwd_idx, pun=-REWARD_MAG, reward=REWARD_MAG)  # TODO: magic numbers!
@@ -204,37 +203,74 @@ def construct_agent(adj: np.ndarray, rwd_idx: Optional[int]) -> Agent:
 
     return agent
 
-
-def plot_efe(efe, q_pi, utility=None, state_ig=None, param_ig=None, E=None):
-
-    plt.plot(efe, label="efe")
-    plt.plot(q_pi, label="q_pi")
-    # print(efe)
-    if utility is not None:
-        plt.plot(utility, label="util")
-        plt.plot(state_ig, label="sig")
-        plt.plot(param_ig, label="pig")
-        plt.plot(E, label="E vector")
-    plt.title("Components of EFE")
+def plot_efe(efe, q_pi, E, utility=None, state_ig=None, param_ig=None):
+    
+    # plt.plot(efe, label='efe') 
+    plt.plot(q_pi, label = 'q_pi')
+    plt.plot(E, label='E vector')
+    # if utility is not None:
+    #     plt.plot(utility, label='util')
+    if state_ig is not None:
+        plt.plot(state_ig, label='sig')
+    if param_ig is not None:
+        plt.plot(param_ig, label='pig')
+    plt.title('Components of EFE')
     plt.legend()
     plt.show()
+    
+def clean_q_pi(q_pi, adj, idx_mode, agent):
+    
+    '''
+    Sets disallowed transitions to zero (considers also disallowes transitions
+                                         given current inferred mode)
+    '''
+    
+    # find disallowed sequences from adj
+    null_seqs = np.argwhere(adj == 0)
+    null_seqs = null_seqs.tolist()
+    
+    # push current state into first column of policies
+    p = np.squeeze(agent.policies)
+    new_col = np.ones(p.shape[0])*idx_mode
+    new_col = new_col.reshape(-1, 1)
+    p = np.hstack((new_col, p))
+
+    # init bool mask 
+    mask = np.zeros(p.shape[0], dtype=bool)
+    
+    # check for disallowed sequences in policy and update mask
+    for seq in null_seqs:
+        mask |= np.any((p[:, :-1] == seq[0]) & (p[:, 1:] == seq[1]), axis=1)
+        
+    # set prob of policies containing disallowed transitions to zero
+    q_pi[mask] = 0
+    
+    # normalise P_pi leaving zeros as zeros
+    non_zero_sum = np.sum(q_pi[q_pi != 0])
+    q_pi_norm = q_pi.copy()
+    q_pi_norm[q_pi != 0] /= non_zero_sum
+    
+    return q_pi_norm
 
 
-def step_active_inf_agent(agent: Agent, obs: np.ndarray):
+def step_active_inf_agent(adj, idx_mode, agent: Agent, obs: np.ndarray):
     agent.reset()  # resets qs and q_pi to uniform
 
     qs = agent.infer_states(obs, distr_obs=True)
 
     if agent.qs_prev is not None:
         agent.qB = agent.update_B(agent.qs_prev)
+    
+    # NOTE: if plotting different components contributing to EFE, this only works 
+    # with a modified infer_policies_expand_G()
+    q_pi, efe, utility, state_ig, param_ig = agent.infer_policies_expand_G()
 
-    # NOTE: if plotting different components contributing to EFE, this only works
-    # with a modification to the pymdp agent class
-    # q_pi, efe, utility, state_ig, param_ig = agent.infer_policies_expand_G()
-    # plot_efe(efe, q_pi, utility, state_ig, param_ig, agent.E)
+    agent.q_pi = clean_q_pi(q_pi, adj, idx_mode, agent)
+       
+    plot_efe(efe, q_pi, agent.E, utility, state_ig, param_ig)
 
-    q_pi, efe = agent.infer_policies()
-    # plot_efe(efe)
+    # q_pi, efe = agent.infer_policies()
+    # plot_efe(efe, q_pi, E = agent.E)
 
     chosen_action_id = agent.sample_action()
 
