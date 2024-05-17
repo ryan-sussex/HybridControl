@@ -27,7 +27,7 @@ class Controller:
         W_u: np.ndarray,
         W_x: np.ndarray,
         b: np.ndarray,
-        rslds: Optional[SLDS] = None
+        rslds: Optional[SLDS] = None,
     ):
         """
         Parameters
@@ -71,7 +71,7 @@ class Controller:
             bs=bs,
         )
         self.discrete_action = 0
-        self._rslds: Optional[SLDS] = rslds   # Store rslds for convenicence
+        self._rslds: Optional[SLDS] = rslds  # Store rslds for convenicence
 
     def mode_posterior(self, observation, action: Optional[np.ndarray] = None):
         if action is None:
@@ -90,6 +90,7 @@ class Controller:
         """
         Takes a continuous observation, outputs continuous action.
         """
+        logger.info("Executing policy..")
         if observation is None:
             logger.info("No observation, returning default action.")
             return self.p_0(self.action_dim)
@@ -97,21 +98,27 @@ class Controller:
         probs = self.mode_posterior(observation, action)
         idx_mode = np.argmax(probs)
         mode = np.eye(len(probs))[idx_mode]  # one-hot rep
+        goal_achieved = idx_mode == self.discrete_action
+        if idx_mode == self.discrete_action:
+            logger.info(
+                f"  Discrete Goal {self.agent.mode_action_names[self.discrete_action]} Achieved!"
+            )
 
         obs = pu.to_obj_array(probs)
-        logger.debug(f"Inferred mode {mode}")
+        logger.info(f"  Inferred mode {idx_mode}")
 
         # Discrete
         self.agent.E = get_prior_over_policies(self.agent, self.cost_matrix, idx_mode)
         self.agent, discrete_action = otm.step_active_inf_agent(self.agent, obs)
         cts_prior = self.mode_priors[discrete_action]
         self.discrete_action = discrete_action  # For debugging
-        logger.info(f"Aiming for {cts_prior}")
+        logger.info(f"  Aiming for {cts_prior}")
 
         # Continuous
         cts_ctr = self.cts_ctrs[discrete_action][idx_mode]
         x_bar = np.r_[observation - cts_prior, 1]  # internal coords TODO: simplify this
         action = cts_ctr.finite_horizon(x_bar, t=0, T=100)  # TODO: magic numbers
+        logger.info(" ..Returning action")
         return action
 
     @staticmethod
@@ -182,13 +189,21 @@ def estimated_system_params(rslds: SLDS):
     return dict(W_u=W_u, W_x=W_x, b=b, As=As, Bs=Bs, bs=bs)
 
 
-def _estimate(obs, actions, d_obs, d_actions, k_components, n_iters: int = 100, rslds: Optional[SLDS] = None) -> SLDS:
+def _estimate(
+    obs,
+    actions,
+    d_obs,
+    d_actions,
+    k_components,
+    n_iters: int = 100,
+    rslds: Optional[SLDS] = None,
+) -> SLDS:
     """
     Fits an RSLDS, if rslds is passed will just call fit function,
     otherwise randomly reinitalise
     """
     if rslds is None:
-        logger.info("No existing RSLDS found, initialising..")  
+        logger.info("No existing RSLDS found, initialising..")
         rslds = SLDS(
             d_obs,
             k_components,
