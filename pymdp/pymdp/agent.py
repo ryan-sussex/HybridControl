@@ -859,6 +859,37 @@ class Agent(object):
         self.B = utils.norm_dist_obj_arr(qB)  # take expected value of posterior Dirichlet parameters to calculate posterior over B array
 
         return qB
+        
+    def update_pB_only(self, qs_prev):
+        """
+        Update posterior beliefs about Dirichlet parameters that parameterise the transition likelihood 
+        
+        Parameters
+        -----------
+        qs_prev: 1D ``numpy.ndarray`` or ``numpy.ndarray`` of dtype object
+            Marginal posterior beliefs over hidden states at previous timepoint.
+    
+        Returns
+        -----------
+        qB: ``numpy.ndarray`` of dtype object
+            Posterior Dirichlet parameters over transition model (same shape as ``B``), after having updated it with state beliefs and actions.
+        """
+
+        qB = learning.update_state_likelihood_dirichlet_interactions(
+            self.pB,
+            self.B,
+            self.action,
+            self.qs,
+            qs_prev,
+            self.B_factor_list,
+            self.lr_pB,
+            self.factors_to_learn
+        )
+
+        self.pB = qB # set new prior to posterior
+        #self.B = utils.norm_dist_obj_arr(qB)  # take expected value of posterior Dirichlet parameters to calculate posterior over B array
+
+        return pB
     
     def _update_B_old(self, qs_prev):
         """
