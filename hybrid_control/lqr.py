@@ -56,7 +56,7 @@ class LinearController:
 
     @coordinate_transform
     def infinite_horizon(self, x):
-        x_bar = np.r_[x - self.x_ref, 1]
+        # x_bar = np.r_[x - self.x_ref, 1]
 
         if self.S_ih is None:
             S = solve_discrete_are(self.A, self.B, self.Q, self.R)
@@ -148,6 +148,7 @@ def backwards_riccati(A, B, Q, R, S):
 
 def get_trajectory_cost(A, B, Q, R, b, x_0, x_ref):
     T = 100  # TODO: magic number
+    # TODO use constraints in simulation to calculate this cost
     lc = LinearController(A, B, Q, R)
     lc = convert_to_servo(lc, x_ref)
     accum_cost = 0

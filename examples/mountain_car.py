@@ -16,20 +16,23 @@ from utils import create_video
 logging.basicConfig(level=logging.INFO)
 
 
+REWARD_LOC = np.array([.5, 5.])
+
 if __name__ == "__main__":
-    ENV_STEPS = 1000
+    ENV_STEPS = 10000
     REFIT_EVERY = 200
 
     env = gym.make('MountainCarContinuous-v0', render_mode="rgb_array")
     env.reset()
     
-    K = 5  # would be unknown
+    K = 7  # would be unknown
     OBS_DIM = 2
     ACT_DIM = 1
     N_ITER = 100
     N_STEPS = 100
 
     controller = get_initial_controller(OBS_DIM, ACT_DIM, K)
+    controller.set_known_reward(100, pos=REWARD_LOC)
     action = controller.policy()
 
     obs = []
@@ -41,6 +44,8 @@ if __name__ == "__main__":
         frames.append(env.render())
 
         if terminated or truncated:
+            if terminated > 0:
+                action = controller.policy(observation, action, reward) # Here to make sure reward loc is updated
             observation, info = env.reset()
 
         obs.append(observation)
@@ -64,7 +69,7 @@ if __name__ == "__main__":
                     np.stack(obs), np.stack(actions)
                 )
             except Exception as e:
-                raise e
+                pass
 
     create_video(frames, 60, "./video/out")
     env.close()
