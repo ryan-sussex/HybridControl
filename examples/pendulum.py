@@ -38,14 +38,14 @@ def preprocess(obs: np.ndarray, polar=True):
 
 
 if __name__ == "__main__":
-    POLAR = True
+    POLAR = False
     ENV_STEPS = 2000
-    REFIT_EVERY = 500
+    REFIT_EVERY = 200
 
     env = gym.make("Pendulum-v1", g=9.81, render_mode="rgb_array")
     env.reset()
 
-    K = 3  # would be unknown
+    K = 6  # would be unknown
     OBS_DIM = 2 if POLAR else 3
     ACT_DIM = 1
     N_ITER = 100

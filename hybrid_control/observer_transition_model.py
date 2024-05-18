@@ -21,7 +21,7 @@ logger = logging.getLogger("discrete_controller")
 
 
 
-REWARD_MAG = 100
+REWARD_MAG = 5
 
 
 def construct_graph():

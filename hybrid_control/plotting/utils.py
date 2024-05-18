@@ -40,7 +40,7 @@ def plot_most_likely_dynamics(
     if at_state is not None:
         at_state = at_state.reshape((1, -1))
         missing = np.repeat(at_state, repeats=xy.shape[0], axis=0)
-        missing = missing[:, D:]
+        missing = missing[:, xy.shape[1]:]
 
     states = np.c_[xy, missing]
     actions = np.zeros((xy.shape[0], controller.action_dim))
