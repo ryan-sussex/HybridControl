@@ -17,6 +17,11 @@ from hybrid_control.costs import get_cost_matrix, get_prior_over_policies
 logger = logging.getLogger("controller")
 
 
+Q_SCALE = 100
+R_SCALE = 1
+LQR_HORIZON = 5
+
+
 class Controller:
 
     def __init__(
@@ -61,18 +66,17 @@ class Controller:
         self.W_x = W_x
         self.W_u = W_u
         self.b = b
-
-        self.reward_pos_cts = reward_pos_cts
-        self.reward_pos_dsc = self._get_reward_idx(reward_pos_cts)
-        self.max_reward = max_reward
-        self.final_controller = None
-        if self.reward_pos_cts is not None:
-            self.final_controller = get_final_controller(
-                As, Bs, bs, self.reward_pos_cts, self.reward_pos_dsc
-            )
-
+        
         self.adj = extract_adjacency(W_x=W_x, W_u=W_u, b=b)
-        self.agent = get_discrete_controller(self.adj, self.reward_pos_dsc)
+        self.agent = get_discrete_controller(self.adj, rwd_idx=None)
+        # Will be overwritten if reward is passed
+
+        self._reward_pos_cts = None
+        self.reward_pos_dsc = None
+        self.final_controller = None
+        self.max_reward = max_reward
+        self.reward_pos_cts = reward_pos_cts
+
         self.cost_matrix = get_cost_matrix(
             self.adj,
             self.mode_priors,
@@ -83,6 +87,29 @@ class Controller:
         )
         self.discrete_action = 0
         self._rslds: Optional[SLDS] = rslds  # Store rslds for convenicence
+
+    @property
+    def reward_pos_cts(self):
+        return self._reward_pos_cts
+
+    @reward_pos_cts.setter
+    def reward_pos_cts(self, obs):
+        self._reward_pos_cts = obs
+        # Set other attributes to keep in sync
+        self.reward_pos_dsc = self._get_reward_idx(obs)
+        self.agent = get_discrete_controller(self.adj, self.reward_pos_dsc)
+        if self.reward_pos_cts is not None:
+            self.final_controller = get_final_controller(
+                self.As, self.Bs, self.bs, self.reward_pos_cts, self.reward_pos_dsc
+            )
+        logger.info(
+            f"setting reward at continuous:{self.reward_pos_cts} "
+            f"and discrete:{self.reward_pos_dsc}"
+        )
+
+    def set_known_reward(self, reward, pos):
+        self.max_reward = reward
+        self.reward_pos_cts = pos
 
     def mode_posterior(self, observation, action: Optional[np.ndarray] = None):
         if action is None:
@@ -109,19 +136,8 @@ class Controller:
         logger.debug("  checking reward..")
         if (self.max_reward is None) or (reward > self.max_reward):
             self.max_reward = reward
+            logger.info( f"Found larger reward:{self.max_reward}")
             self.reward_pos_cts = observation
-            self.reward_pos_dsc = np.argmax(self.mode_posterior(observation, action))
-            logger.info(
-                f"Found larger reward:{self.max_reward}, "
-                f"at continuous:{self.reward_pos_cts} "
-                f"and discrete:{self.reward_pos_dsc}"
-            )
-            logger.info("Resetting active inference with new objective")
-            self.agent = get_discrete_controller(self.adj, self.reward_pos_dsc)
-            self.final_controller = get_final_controller(
-                self.As, self.Bs, self.bs, self.reward_pos_cts, self.reward_pos_dsc
-            )
-            # TODO: convert reward to propertty with setter methods
         return
 
     def policy(
@@ -156,22 +172,24 @@ class Controller:
         self.agent.E = get_prior_over_policies(
             self.adj, self.agent, self.cost_matrix, idx_mode
         )
-        self.agent, discrete_action = otm.step_active_inf_agent(self.adj, idx_mode, self.agent, obs)
+        self.agent, discrete_action = otm.step_active_inf_agent(
+            self.adj, idx_mode, self.agent, obs
+        )
         cts_prior = self.mode_priors[discrete_action]
         self.discrete_action = discrete_action  # For debugging
         logger.info(f"  Aiming for {cts_prior}")
         logger.info(f"  max reward @ {self.reward_pos_dsc} @ {self.reward_pos_cts}")
 
-
         if (idx_mode == self.reward_pos_dsc) and (discrete_action == idx_mode):
             logger.info("Attempting to stabilise at max reward")
-            return self.final_controller.finite_horizon(observation, t=0, T=100)
-
+            action = self.final_controller.finite_horizon(observation, t=0, T=LQR_HORIZON)
+            logger.info(f" ..Returning action {action}")
+            return action
         # Continuous
         cts_ctr = self.cts_ctrs[discrete_action][idx_mode]
         # x_bar = np.r_[observation - cts_prior, 1]  # internal coords TODO: simplify this
-        action = cts_ctr.finite_horizon(observation, t=0, T=100)  # TODO: magic numbers
-        logger.info(" ..Returning action")
+        action = cts_ctr.finite_horizon(observation, t=0, T=LQR_HORIZON)  # TODO: magic numbers
+        logger.info(f" ..Returning action {action}")
         return action
 
     @staticmethod
@@ -209,7 +227,7 @@ def get_default_lqr_costs(obs_dims, action_dims):
     -------
     Dict: (Q, R)
     """
-    return dict(Q=np.eye(obs_dims) * 100, R=np.eye(action_dims))  # TODO: Magic numbers
+    return dict(Q=np.eye(obs_dims) * Q_SCALE, R=np.eye(action_dims) * R_SCALE)  # TODO: Magic numbers
 
 
 def get_cts_controller(As, Bs, bs, i: int, j: int, mode_priors: List):

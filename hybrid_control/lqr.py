@@ -148,6 +148,7 @@ def backwards_riccati(A, B, Q, R, S):
 
 def get_trajectory_cost(A, B, Q, R, b, x_0, x_ref):
     T = 100  # TODO: magic number
+    # TODO use constraints in simulation to calculate this cost
     lc = LinearController(A, B, Q, R)
     lc = convert_to_servo(lc, x_ref)
     accum_cost = 0
