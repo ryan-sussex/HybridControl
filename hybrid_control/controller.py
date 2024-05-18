@@ -35,6 +35,9 @@ class Controller:
         rslds: Optional[SLDS] = None,
         reward_pos_cts: Optional[np.ndarray] = None,
         max_reward: Optional[float] = None,
+        max_u: float = np.inf,
+        min_u: float = -np.inf,
+        Sigmas: Optional[List[np.ndarray]]=None
     ):
         """
         Parameters
@@ -87,6 +90,15 @@ class Controller:
         )
         self.discrete_action = 0
         self._rslds: Optional[SLDS] = rslds  # Store rslds for convenicence
+        self.max_u = max_u
+        self.min_u = min_u
+        self.prev_mode: Optional[int] = None
+        self.Sigmas = Sigmas
+        if Sigmas is not None:
+            for i, sigma in enumerate(Sigmas):
+                print(sigma)
+                std = sigma.dot(sigma)
+                logger.info(f"std for mode {i}:{std}")
 
     @property
     def reward_pos_cts(self):
@@ -149,7 +161,7 @@ class Controller:
         """
         Takes a continuous observation, outputs continuous action.
         """
-        logger.info("Executing policy..")
+        logger.debug("Executing policy..")
         if observation is None:
             logger.info("No observation, returning default action.")
             return self.p_0(self.action_dim)
@@ -159,37 +171,52 @@ class Controller:
 
         probs = self.mode_posterior(observation, action)
         idx_mode = np.argmax(probs)
+        logger.debug(f"  Inferred mode {idx_mode}")
 
-        if idx_mode == self.discrete_action:
-            logger.info(
-                f"  Discrete Goal {self.agent.mode_action_names[self.discrete_action]} Achieved!"
+        if self.prev_mode is None:
+            self.discrete_action = np.argmin(
+                [sigma.dot(sigma) for sigma in self.Sigmas]
             )
+            logger.info(f"first obs, picking action {self.discrete_action} based on uncertainty")
 
-        obs = pu.to_obj_array(probs)
-        logger.info(f"  Inferred mode {idx_mode}")
 
-        # Discrete
-        self.agent.E = get_prior_over_policies(
-            self.adj, self.agent, self.cost_matrix, idx_mode
-        )
-        self.agent, discrete_action = otm.step_active_inf_agent(
-            self.adj, idx_mode, self.agent, obs
-        )
-        cts_prior = self.mode_priors[discrete_action]
-        self.discrete_action = discrete_action  # For debugging
-        logger.info(f"  Aiming for {cts_prior}")
-        logger.info(f"  max reward @ {self.reward_pos_dsc} @ {self.reward_pos_cts}")
+        if (self.prev_mode is not None) and (idx_mode != self.prev_mode):
+            print(self.prev_mode)
+            logger.info(f"  Inferred mode {idx_mode}")
+            logger.info("Entered new mode, triggering discrete planner")
+            if idx_mode == self.discrete_action:
+                logger.info(
+                    f"  Discrete Goal {self.agent.mode_action_names[self.discrete_action]} Achieved!"
+                )
 
-        if (idx_mode == self.reward_pos_dsc) and (discrete_action == idx_mode):
+            obs = pu.to_obj_array(probs)
+
+            # Discrete
+            self.agent.E = get_prior_over_policies(
+                self.adj, self.agent, self.cost_matrix, idx_mode
+            )
+            self.agent, discrete_action = otm.step_active_inf_agent(
+                self.adj, idx_mode, self.agent, obs
+            )
+            cts_prior = self.mode_priors[discrete_action]
+            self.discrete_action = discrete_action  # For debugging
+            logger.info(f"  Aiming for {cts_prior}")
+            logger.info(f"  max reward @ {self.reward_pos_dsc} @ {self.reward_pos_cts}")
+
+        if (idx_mode == self.reward_pos_dsc) and (self.discrete_action == idx_mode):
             logger.info("Attempting to stabilise at max reward")
             action = self.final_controller.finite_horizon(observation, t=0, T=LQR_HORIZON)
+            action = bound_action(action, self.max_u, self.min_u)
             logger.info(f" ..Returning action {action}")
             return action
+        
+        self.prev_mode = idx_mode
         # Continuous
-        cts_ctr = self.cts_ctrs[discrete_action][idx_mode]
+        cts_ctr = self.cts_ctrs[self.discrete_action][idx_mode]
         # x_bar = np.r_[observation - cts_prior, 1]  # internal coords TODO: simplify this
         action = cts_ctr.finite_horizon(observation, t=0, T=LQR_HORIZON)  # TODO: magic numbers
-        logger.info(f" ..Returning action {action}")
+        action = bound_action(action, self.max_u, self.min_u)
+        logger.debug(f" ..Returning action {action}")
         return action
 
     @staticmethod
@@ -214,7 +241,16 @@ class Controller:
             rslds=self._rslds,
             reward_pos_cts=self.reward_pos_cts,
             max_reward=self.max_reward,
+            max_u=self.max_u,
+            min_u=self.min_u
         )
+
+
+def bound_action(action, max_u, min_u):
+    """only works for 1d actions"""
+    action[action > max_u] = max_u
+    action[action < min_u] = min_u
+    return action
 
 
 def get_discrete_controller(adj, rwd_idx: Optional[int]):
@@ -273,7 +309,7 @@ def estimated_system_params(rslds: SLDS):
     As, bs, Bs, Sigmas = dynamic_params
     # TODO: bias term for linear ctrlrs, and extra weight for inputs
     # Workout exactly what Sigmas are
-    return dict(W_u=W_u, W_x=W_x, b=b, As=As, Bs=Bs, bs=bs)
+    return dict(W_u=W_u, W_x=W_x, b=b, As=As, Bs=Bs, bs=bs, Sigmas=Sigmas)
 
 
 def _estimate(
@@ -322,7 +358,7 @@ def _estimate(
     return rslds
 
 
-def get_initial_controller(d_obs, d_actions, k_components):
+def get_initial_controller(d_obs, d_actions, k_components, **kwargs):
     rslds = SLDS(
         d_obs,
         k_components,
@@ -333,4 +369,4 @@ def get_initial_controller(d_obs, d_actions, k_components):
         emissions="gaussian_id",
         single_subspace=True,
     )
-    return Controller(**estimated_system_params(rslds), rslds=rslds)
+    return Controller(**estimated_system_params(rslds), rslds=rslds, **kwargs)

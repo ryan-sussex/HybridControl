@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 from scipy.special import softmax
 
 
-THRESHOLD = .7
+THRESHOLD = .95
 
 
 def generate_prior(
