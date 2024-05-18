@@ -17,6 +17,10 @@ from hybrid_control.costs import get_cost_matrix, get_prior_over_policies
 logger = logging.getLogger("controller")
 
 
+Q_SCALE = 100
+R_SCALE = 100
+
+
 class Controller:
 
     def __init__(
@@ -221,7 +225,7 @@ def get_default_lqr_costs(obs_dims, action_dims):
     -------
     Dict: (Q, R)
     """
-    return dict(Q=np.eye(obs_dims) * 100, R=np.eye(action_dims))  # TODO: Magic numbers
+    return dict(Q=np.eye(obs_dims) * Q_SCALE, R=np.eye(action_dims) * R_SCALE)  # TODO: Magic numbers
 
 
 def get_cts_controller(As, Bs, bs, i: int, j: int, mode_priors: List):
