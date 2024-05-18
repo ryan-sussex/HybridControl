@@ -102,6 +102,10 @@ class Controller:
             f"and discrete:{self.reward_pos_dsc}"
         )
 
+    def set_known_reward(self, reward, pos):
+        self.max_reward = reward
+        self.reward_pos_cts = pos
+
     def mode_posterior(self, observation, action: Optional[np.ndarray] = None):
         if action is None:
             logger.warning(
@@ -179,7 +183,7 @@ class Controller:
         cts_ctr = self.cts_ctrs[discrete_action][idx_mode]
         # x_bar = np.r_[observation - cts_prior, 1]  # internal coords TODO: simplify this
         action = cts_ctr.finite_horizon(observation, t=0, T=100)  # TODO: magic numbers
-        logger.info(" ..Returning action")
+        logger.info(f" ..Returning action {action}")
         return action
 
     @staticmethod
