@@ -16,7 +16,7 @@ from utils import create_video
 logging.basicConfig(level=logging.INFO)
 
 
-REWARD_LOC = np.array([.5, 0.])
+REWARD_LOC = np.array([.5, 5.])
 
 if __name__ == "__main__":
     ENV_STEPS = 10000
@@ -69,7 +69,7 @@ if __name__ == "__main__":
                     np.stack(obs), np.stack(actions)
                 )
             except Exception as e:
-                raise e
+                pass
 
     create_video(frames, 60, "./video/out")
     env.close()

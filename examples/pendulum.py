@@ -26,7 +26,7 @@ def to_polar(x: np.ndarray):
     ---------
     np.ndarray: (state_dim -1, ), first two cordinates replaced with theta
     """
-    theta = np.arctan(x[1] / x[0])
+    theta = np.arctan(x[1] / x[0]) - np.pi / 4
     x[1] = theta
     return x[1:]
 
@@ -37,21 +37,26 @@ def preprocess(obs: np.ndarray, polar=True):
     return obs
 
 
+
+
 if __name__ == "__main__":
-    POLAR = False
+    POLAR = True
+    REWARD_LOC = np.array([0, 0.]) if POLAR else np.array([0, 1, 0])
+    
     ENV_STEPS = 2000
     REFIT_EVERY = 200
 
     env = gym.make("Pendulum-v1", g=9.81, render_mode="rgb_array")
     env.reset()
 
-    K = 6  # would be unknown
+    K = 3  # would be unknown
     OBS_DIM = 2 if POLAR else 3
     ACT_DIM = 1
     N_ITER = 100
     N_STEPS = 100
 
     controller = get_initial_controller(OBS_DIM, ACT_DIM, K)
+    controller.set_known_reward(100, pos=REWARD_LOC)
     action = controller.policy()
 
     obs = []
@@ -89,7 +94,7 @@ if __name__ == "__main__":
                     np.stack(obs), np.stack(actions)
                 )
             except Exception as e:
-                raise e
+                pass
 
     create_video(frames, 60, "./video/out")
     env.close()

@@ -18,7 +18,8 @@ logger = logging.getLogger("controller")
 
 
 Q_SCALE = 100
-R_SCALE = 100
+R_SCALE = 1
+LQR_HORIZON = 5
 
 
 class Controller:
@@ -181,12 +182,13 @@ class Controller:
 
         if (idx_mode == self.reward_pos_dsc) and (discrete_action == idx_mode):
             logger.info("Attempting to stabilise at max reward")
-            return self.final_controller.finite_horizon(observation, t=0, T=100)
-
+            action = self.final_controller.finite_horizon(observation, t=0, T=LQR_HORIZON)
+            logger.info(f" ..Returning action {action}")
+            return action
         # Continuous
         cts_ctr = self.cts_ctrs[discrete_action][idx_mode]
         # x_bar = np.r_[observation - cts_prior, 1]  # internal coords TODO: simplify this
-        action = cts_ctr.finite_horizon(observation, t=0, T=100)  # TODO: magic numbers
+        action = cts_ctr.finite_horizon(observation, t=0, T=LQR_HORIZON)  # TODO: magic numbers
         logger.info(f" ..Returning action {action}")
         return action
 
