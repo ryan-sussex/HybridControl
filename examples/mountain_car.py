@@ -16,6 +16,8 @@ from utils import create_video
 logging.basicConfig(level=logging.INFO)
 
 
+REWARD_LOC = np.array([.5, 0.])
+
 if __name__ == "__main__":
     ENV_STEPS = 10000
     REFIT_EVERY = 200
@@ -30,6 +32,7 @@ if __name__ == "__main__":
     N_STEPS = 100
 
     controller = get_initial_controller(OBS_DIM, ACT_DIM, K)
+    controller.set_known_reward(100, pos=REWARD_LOC)
     action = controller.policy()
 
     obs = []
