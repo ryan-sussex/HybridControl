@@ -26,7 +26,7 @@ if __name__ == "__main__":
     env.reset()
     max_u = env.action_space.high
     min_u = env.action_space.low  
-    K = 5  # would be unknown
+    K = 12  # would be unknown
     OBS_DIM = 2
     ACT_DIM = 1
     N_ITER = 100
@@ -58,14 +58,15 @@ if __name__ == "__main__":
         if i % REFIT_EVERY == REFIT_EVERY - 1:
             create_video(frames, 60, "./video/out")
             try:
-                # plot_suite(
-                #     controller,
-                #     np.stack(obs),
-                #     np.stack(actions),
-                #     discrete_actions=discrete_actions,
-                #     start=i + 1 - REFIT_EVERY,
-                # )
-                # plt.show()
+                plot_suite(
+                    controller,
+                    np.stack(obs),
+                    np.stack(actions),
+                    discrete_actions=discrete_actions,
+                    start=i + 1 - REFIT_EVERY,
+                    level=0
+                )
+                plt.show()
                 controller = controller.estimate_and_identify(
                     np.stack(obs), np.stack(actions)
                 )

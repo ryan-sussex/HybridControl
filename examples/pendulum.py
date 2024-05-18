@@ -84,14 +84,15 @@ if __name__ == "__main__":
             create_video(frames, 60, "./video/out")
             observation, info = env.reset()
             try:
-                # plot_suite(
-                #     controller,
-                #     np.stack(obs),
-                #     np.stack(actions),
-                #     discrete_actions=discrete_actions,
-                #     start=i + 1 - REFIT_EVERY,
-                # )
-                # plt.show()
+                plot_suite(
+                    controller,
+                    np.stack(obs),
+                    np.stack(actions),
+                    discrete_actions=discrete_actions,
+                    start=i + 1 - REFIT_EVERY,
+                    level=0
+                )
+                plt.show()
                 controller = controller.estimate_and_identify(
                     np.stack(obs), np.stack(actions)
                 )

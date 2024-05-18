@@ -156,7 +156,7 @@ class Controller:
         self,
         observation: Optional[np.ndarray] = None,
         action: Optional[np.ndarray] = None,
-        reward: Optional[np.ndarray] = None,
+        reward: Optional[np.ndarray] = None
     ):
         """
         Takes a continuous observation, outputs continuous action.
@@ -174,9 +174,13 @@ class Controller:
         logger.debug(f"  Inferred mode {idx_mode}")
 
         if self.prev_mode is None:
-            self.discrete_action = np.argmin(
-                [sigma.dot(sigma) for sigma in self.Sigmas]
-            )
+            is_connected = np.sum(self.adj, axis=1) > 1
+            is_connected = self.adj[idx_mode] == 1
+            is_connected[idx_mode] = False
+            print(is_connected)
+            sigmas = [sigma.dot(sigma) + np.random.normal(0, 1) if is_connected[i] else - np.inf for i, sigma in enumerate(self.Sigmas) ]
+            # break ties arbritrarily
+            self.discrete_action = np.argmax(sigmas)
             logger.info(f"first obs, picking action {self.discrete_action} based on uncertainty")
 
 
