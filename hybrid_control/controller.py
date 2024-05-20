@@ -35,6 +35,9 @@ class Controller:
         rslds: Optional[SLDS] = None,
         reward_pos_cts: Optional[np.ndarray] = None,
         max_reward: Optional[float] = None,
+        max_u: float = np.inf,
+        min_u: float = -np.inf,
+        Sigmas: Optional[List[np.ndarray]] = None,
     ):
         """
         Parameters
@@ -66,7 +69,7 @@ class Controller:
         self.W_x = W_x
         self.W_u = W_u
         self.b = b
-        
+
         self.adj = extract_adjacency(W_x=W_x, W_u=W_u, b=b)
         self.agent = get_discrete_controller(self.adj, rwd_idx=None)
         # Will be overwritten if reward is passed
@@ -87,6 +90,15 @@ class Controller:
         )
         self.discrete_action = 0
         self._rslds: Optional[SLDS] = rslds  # Store rslds for convenicence
+        self.max_u = max_u
+        self.min_u = min_u
+        self.prev_mode: Optional[int] = None
+        self.Sigmas = (
+            Sigmas
+            if Sigmas is not None
+            else [np.ones(self.obs_dim) for i in range(self.n_modes)]
+        )
+        self.stds = [sigma.dot(sigma) for sigma in self.Sigmas]
 
     @property
     def reward_pos_cts(self):
@@ -136,7 +148,7 @@ class Controller:
         logger.debug("  checking reward..")
         if (self.max_reward is None) or (reward > self.max_reward):
             self.max_reward = reward
-            logger.info( f"Found larger reward:{self.max_reward}")
+            logger.info(f"Found larger reward:{self.max_reward}")
             self.reward_pos_cts = observation
         return
 
@@ -149,7 +161,7 @@ class Controller:
         """
         Takes a continuous observation, outputs continuous action.
         """
-        logger.info("Executing policy..")
+        logger.debug("Executing policy..")
         if observation is None:
             logger.info("No observation, returning default action.")
             return self.p_0(self.action_dim)
@@ -157,39 +169,61 @@ class Controller:
         if reward is not None:
             self._check_and_update_reward(observation, action, reward)
 
+        # Infer Mode
         probs = self.mode_posterior(observation, action)
         idx_mode = np.argmax(probs)
+        logger.debug(f"  Inferred mode {idx_mode}")
 
-        if idx_mode == self.discrete_action:
+        if self.prev_mode is None:
+            # Pick most uncertain (connected mode to explore)
+            self.discrete_action = get_max_connected_std(self.adj, self.stds, idx_mode)
             logger.info(
-                f"  Discrete Goal {self.agent.mode_action_names[self.discrete_action]} Achieved!"
+                "first obs, picking action "
+                f"{self.discrete_action} based on uncertainty"
             )
 
-        obs = pu.to_obj_array(probs)
-        logger.info(f"  Inferred mode {idx_mode}")
+        if (self.prev_mode is not None) and (idx_mode != self.prev_mode):
+            # If new mode, trigger discrete planner
+            logger.info(f"  Inferred mode {idx_mode}")
+            logger.info("Entered new mode, triggering discrete planner")
+            if idx_mode == self.discrete_action:
+                logger.info(
+                    "  Discrete Goal "
+                    f"{self.agent.mode_action_names[self.discrete_action]} Achieved!"
+                )
 
-        # Discrete
-        self.agent.E = get_prior_over_policies(
-            self.adj, self.agent, self.cost_matrix, idx_mode
-        )
-        self.agent, discrete_action = otm.step_active_inf_agent(
-            self.adj, idx_mode, self.agent, obs
-        )
-        cts_prior = self.mode_priors[discrete_action]
-        self.discrete_action = discrete_action  # For debugging
-        logger.info(f"  Aiming for {cts_prior}")
-        logger.info(f"  max reward @ {self.reward_pos_dsc} @ {self.reward_pos_cts}")
+            obs = pu.to_obj_array(probs)
+            self.agent.E = get_prior_over_policies(
+                self.adj, self.agent, self.cost_matrix, idx_mode
+            )
+            self.agent, discrete_action = otm.step_active_inf_agent(
+                self.adj, idx_mode, self.agent, obs
+            )
+            cts_prior = self.mode_priors[discrete_action]
+            self.discrete_action = discrete_action
+            logger.info(f"  Aiming for {cts_prior}")
+            logger.info(f"  max reward @ {self.reward_pos_dsc} @ {self.reward_pos_cts}")
 
-        if (idx_mode == self.reward_pos_dsc) and (discrete_action == idx_mode):
+        self.prev_mode = idx_mode
+        
+        if (idx_mode == self.reward_pos_dsc) and (self.discrete_action == idx_mode):
+            # If in reward location, and planner discrete wishes to stay
+            # Attempt to stabilise at reward location.
             logger.info("Attempting to stabilise at max reward")
-            action = self.final_controller.finite_horizon(observation, t=0, T=LQR_HORIZON)
+            action = self.final_controller.finite_horizon(
+                observation, t=0, T=LQR_HORIZON
+            )
+            action = bound_action(action, self.max_u, self.min_u)
             logger.info(f" ..Returning action {action}")
             return action
-        # Continuous
-        cts_ctr = self.cts_ctrs[discrete_action][idx_mode]
-        # x_bar = np.r_[observation - cts_prior, 1]  # internal coords TODO: simplify this
-        action = cts_ctr.finite_horizon(observation, t=0, T=LQR_HORIZON)  # TODO: magic numbers
-        logger.info(f" ..Returning action {action}")
+
+        # Otherwise find continuous action
+        cts_ctr = self.cts_ctrs[self.discrete_action][idx_mode]
+        action = cts_ctr.finite_horizon(
+            observation, t=0, T=LQR_HORIZON
+        )  # TODO: magic numbers
+        action = bound_action(action, self.max_u, self.min_u)
+        logger.debug(f" ..Returning action {action}")
         return action
 
     @staticmethod
@@ -214,7 +248,32 @@ class Controller:
             rslds=self._rslds,
             reward_pos_cts=self.reward_pos_cts,
             max_reward=self.max_reward,
+            max_u=self.max_u,
+            min_u=self.min_u,
         )
+
+
+def get_max_connected_std(adj: np.ndarray, stds:np.ndarray, idx: int) -> int:
+    sigmas = [
+        std + np.random.normal(0, 1) 
+        if check_is_connected(adj, i, idx) else -np.inf
+        for i, std in enumerate(stds)
+    ]
+    # break ties arbritrarily
+    return np.argmax(sigmas)
+
+
+def check_is_connected(adj: np.ndarray, i: int, j: int, self_connected=False):
+    if i == j:
+        return self_connected
+    return adj[i, j] == 1
+
+
+def bound_action(action, max_u, min_u):
+    """only works for 1d actions"""
+    action[action > max_u] = max_u
+    action[action < min_u] = min_u
+    return action
 
 
 def get_discrete_controller(adj, rwd_idx: Optional[int]):
@@ -227,7 +286,9 @@ def get_default_lqr_costs(obs_dims, action_dims):
     -------
     Dict: (Q, R)
     """
-    return dict(Q=np.eye(obs_dims) * Q_SCALE, R=np.eye(action_dims) * R_SCALE)  # TODO: Magic numbers
+    return dict(
+        Q=np.eye(obs_dims) * Q_SCALE, R=np.eye(action_dims) * R_SCALE
+    )  # TODO: Magic numbers
 
 
 def get_cts_controller(As, Bs, bs, i: int, j: int, mode_priors: List):
@@ -273,7 +334,7 @@ def estimated_system_params(rslds: SLDS):
     As, bs, Bs, Sigmas = dynamic_params
     # TODO: bias term for linear ctrlrs, and extra weight for inputs
     # Workout exactly what Sigmas are
-    return dict(W_u=W_u, W_x=W_x, b=b, As=As, Bs=Bs, bs=bs)
+    return dict(W_u=W_u, W_x=W_x, b=b, As=As, Bs=Bs, bs=bs, Sigmas=Sigmas)
 
 
 def _estimate(
@@ -322,7 +383,7 @@ def _estimate(
     return rslds
 
 
-def get_initial_controller(d_obs, d_actions, k_components):
+def get_initial_controller(d_obs, d_actions, k_components, **kwargs):
     rslds = SLDS(
         d_obs,
         k_components,
@@ -333,4 +394,4 @@ def get_initial_controller(d_obs, d_actions, k_components):
         emissions="gaussian_id",
         single_subspace=True,
     )
-    return Controller(**estimated_system_params(rslds), rslds=rslds)
+    return Controller(**estimated_system_params(rslds), rslds=rslds, **kwargs)
