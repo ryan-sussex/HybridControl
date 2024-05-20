@@ -161,7 +161,7 @@ class Agent(object):
             for f in range(self.num_factors):
                 factor_dims = tuple([self.num_states[f] for f in self.B_factor_list[f]])
                 assert self.B[f].shape[1:-1] == factor_dims, f"Please input a `B_factor_list` whose {f}-th indices pick out the hidden state factors that line up with the all-but-final lagging dimensions of B{f}..." 
-                if self.pB != None:
+                if self.pB is not None:
                     assert self.pB[f].shape[1:-1] == factor_dims, f"Please input a `B_factor_list` whose {f}-th indices pick out the hidden state factors that line up with the all-but-final lagging dimensions of pB{f}..." 
         else:
             for f in range(self.num_factors):
@@ -367,7 +367,7 @@ class Agent(object):
         if self.pA != None:
             self.A = utils.norm_dist_obj_arr(self.pA)
         
-        if self.pB != None:
+        if self.pB is not None:
             self.B = utils.norm_dist_obj_arr(self.pB)
 
         return self.qs
