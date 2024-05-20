@@ -18,6 +18,7 @@ class LinearController:
         cv + d = 0
     then cost function xP(1, 0, 0, 0)Px, where P projects onto the line
     """
+
     def __init__(
         self,
         A: np.ndarray,
@@ -52,6 +53,7 @@ class LinearController:
             if x.shape[0] == self.x_ref.shape[0]:
                 x = np.r_[x - self.x_ref, 1]  # internal coords
             return fn(self, x, *args, **kwargs)
+
         return wrapped
 
     @coordinate_transform
