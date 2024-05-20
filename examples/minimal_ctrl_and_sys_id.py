@@ -40,7 +40,6 @@ if __name__ == "__main__":
     REFIT_EVERY = 100
 
     controller = get_initial_controller(OBS_DIM, ACT_DIM, K)
-    print(controller.adj)
     action = controller.policy()
 
     obs = []
@@ -51,7 +50,11 @@ if __name__ == "__main__":
         observation, reward, terminated, truncated, info = env.step(action)
         obs.append(observation)
         actions.append(action)
+        # action[action > 10] = 10 
         discrete_actions.append(controller.discrete_action)
+
+        if observation.dot(observation) > 100:
+            observation, _ = env.reset()
 
         action = controller.policy(observation, action)
         
@@ -69,7 +72,7 @@ if __name__ == "__main__":
                     np.stack(obs), np.stack(actions)
                 )
             except Exception as e:
-                raise e  
+                pass 
 
     # Simple report
     from hybrid_control.logisitc_reg import mode_posterior

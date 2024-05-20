@@ -74,6 +74,12 @@ def plot_most_likely_dynamics(
     ax.set_xlim(xlim)
     ax.set_ylim(ylim)
     ax.set_title("Most likely dynamics,  dims(0,1)")
+
+
+    if controller.reward_pos_cts is not None:
+        plot_reward(controller, xlim=xlim, ylim=ylim, ax=ax)
+
+    plot_mode_priors(controller, xlim=xlim, ylim=ylim, ax=ax)
     return ax
 
 
@@ -210,9 +216,6 @@ def plot_overlapped(
         ylim=ylim,
         discrete_actions=discrete_actions,
     )
-    if controller.reward_pos_cts is not None:
-        plot_reward(controller, xlim=xlim, ylim=ylim, ax=ax)
-    
     ax.legend()
     return ax
 
@@ -232,6 +235,21 @@ def plot_reward(
     ax.set_title("Trajectory dims(0,1)",)
     return ax
 
+def plot_mode_priors(
+    controller: Controller,
+    ax=None,
+    xlim=None,
+    ylim=None,
+):
+    if ax is None:
+        fig = plt.figure(figsize=FIGSIZE)
+        ax = fig.add_subplot(111)
+    for i, mode in enumerate(controller.mode_priors):
+        ax.scatter(mode[0], mode[1], s=100, marker=">", label=f"goal {i}", )
+        ax.set_xlim(xlim)
+        ax.set_ylim(ylim)
+        ax.set_title("Trajectory dims(0,1)",)
+    return ax
 def plot_multiple_overlapped(
     controller: Controller,
     obs: np.ndarray,
@@ -331,6 +349,7 @@ def plot_suite(
     discrete_actions: Optional[List[int]] = None,
     start=0,
     end=-1,
+    level=3
 ):
     obs, actions, discrete_actions = get_chunk(
         obs, actions, discrete_actions, start=start, end=end
@@ -338,17 +357,21 @@ def plot_suite(
 
     if controller.obs_dim < 2:
         return
+    xlim, ylim = get_lims(obs)
+
+    plot_most_likely_dynamics(controller, xlim=xlim, ylim=ylim)
+
     plot_multiple_overlapped(
         controller, obs, actions, discrete_actions=discrete_actions
     )
 
+
+    if level <=1:
+        return
     plot_overlapped(
         controller, obs, actions, end=100, discrete_actions=discrete_actions
     )
 
-    xlim, ylim = get_lims(obs)
-
-    plot_most_likely_dynamics(controller, xlim=xlim, ylim=ylim)
     plot_trajectory(controller, obs, actions, xlim=xlim, ylim=ylim)
     plot_actions(
         controller,

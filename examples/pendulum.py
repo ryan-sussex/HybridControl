@@ -48,14 +48,16 @@ if __name__ == "__main__":
 
     env = gym.make("Pendulum-v1", g=9.81, render_mode="rgb_array")
     env.reset()
+    max_u = env.action_space.high
+    min_u = env.action_space.low
 
-    K = 3  # would be unknown
+    K = 15 # would be unknown
     OBS_DIM = 2 if POLAR else 3
     ACT_DIM = 1
     N_ITER = 100
     N_STEPS = 100
 
-    controller = get_initial_controller(OBS_DIM, ACT_DIM, K)
+    controller = get_initial_controller(OBS_DIM, ACT_DIM, K, max_u=max_u, min_u=min_u)
     controller.set_known_reward(100, pos=REWARD_LOC)
     action = controller.policy()
 
@@ -88,6 +90,7 @@ if __name__ == "__main__":
                     np.stack(actions),
                     discrete_actions=discrete_actions,
                     start=i + 1 - REFIT_EVERY,
+                    level=0
                 )
                 plt.show()
                 controller = controller.estimate_and_identify(
