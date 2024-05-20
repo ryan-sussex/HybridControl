@@ -26,16 +26,50 @@ def estimated_system_params(env):
     return W, b, As, Bs
 
 
+def get_first_bounding_box(As, Bs, u_max):
+    A = As[0]
+    B = Bs[0]
+    max_u = np.array([u_max, u_max])
+    x_max = np.linalg.pinv(np.eye(A.shape[0])-A) @ B @ max_u
+    x_min = np.linalg.pinv(np.eye(A.shape[0])-A) @ B @ (-max_u)
+    return x_max, x_min
+
+
+def extend_modes(As: List, Bs: List, W, b, u_max: float):
+    n_states = As[0].shape[0]
+    for i in range(4):
+        As.append(As[0])
+        Bs.append(Bs[0])
+    max_u = np.array([u_max, u_max])
+    # mixed_u  = np.array([u_max, -u_max])
+    W = np.block(
+        [
+            [W], 
+            [-(np.eye(n_states) - As[0]) - W[0]],
+            [(np.eye(n_states) - As[0]) + W[0]]
+        ]
+    )
+    print(W.shape)
+    # bs = np.block([b.T, -Bs[0]@max_u])
+    bs = np.block([b.T, -Bs[0]@max_u, -Bs[0]@max_u])
+    print(bs.shape)
+    return As, Bs, W, bs
+
+
+
 if __name__ == "__main__":
     # ENV_STEPS = 50
     ENV_STEPS = 50
-    REWARD_POS = np.array([1,1]) * 3
+    REWARD_POS = np.array([1,1]) * 4
     U_MAX = 1
 
     env = get_2d_spiral(u_max=U_MAX)
 
     W, b, As, Bs = estimated_system_params(env)
 
+    As, Bs, W, b = extend_modes(As, Bs, W, b, u_max=U_MAX)
+
+    print(len(As))
 
     controller = Controller(
         As=As, 
