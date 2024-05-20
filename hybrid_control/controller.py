@@ -176,7 +176,7 @@ class Controller:
 
         if self.prev_mode is None:
             # Pick most uncertain (connected mode to explore)
-            self.discrete_action = get_max_connected_std(self.stds, idx_mode)
+            self.discrete_action = get_max_connected_std(self.adj, self.stds, idx_mode)
             logger.info(
                 "first obs, picking action "
                 f"{self.discrete_action} based on uncertainty"
@@ -253,9 +253,10 @@ class Controller:
         )
 
 
-def get_max_connected_std(stds, idx):
+def get_max_connected_std(adj: np.ndarray, stds:np.ndarray, idx: int) -> int:
     sigmas = [
-        std + np.random.normal(0, 1) if check_is_connected(i, idx) else -np.inf
+        std + np.random.normal(0, 1) 
+        if check_is_connected(adj, i, idx) else -np.inf
         for i, std in enumerate(stds)
     ]
     # break ties arbritrarily
