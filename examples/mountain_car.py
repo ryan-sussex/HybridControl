@@ -26,7 +26,7 @@ if __name__ == "__main__":
     env.reset()
     max_u = env.action_space.high
     min_u = env.action_space.low  
-    K = 12  # would be unknown
+    K = 5  # would be unknown
     OBS_DIM = 2
     ACT_DIM = 1
     N_ITER = 100

@@ -56,14 +56,12 @@ class LinearController:
 
     @coordinate_transform
     def infinite_horizon(self, x):
-        # x_bar = np.r_[x - self.x_ref, 1]
-
         if self.S_ih is None:
             S = solve_discrete_are(self.A, self.B, self.Q, self.R)
             self.S_ih = S
 
         K = calculate_gain(self.A, self.B, self.Q, self.R, self.S_ih)
-        return -K @ x_bar
+        return -K @ x
 
     @coordinate_transform
     def finite_horizon(self, x, t, T):
