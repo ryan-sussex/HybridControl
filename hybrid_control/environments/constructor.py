@@ -8,7 +8,7 @@ import numpy as np
 
 class LinearSystem:
 
-    def __init__(self, A, B, w = None, b = None) -> None:
+    def __init__(self, A, B, w = None, b = None, u_max=None) -> None:
         self.A = A
         self.B = B
         self.dims = self.A.shape[0]
@@ -18,8 +18,12 @@ class LinearSystem:
             b = 0
         self.w = w
         self.b = b
+        self.u_max = u_max if u_max is not None else np.inf
 
     def forward(self, x, u, sigma=.1):
+        u[u > self.u_max] = self.u_max
+        u[-u < -self.u_max] = -self.u_max
+        print(u)
         return self.A @ x + self.B @ u + np.random.normal(np.zeros(len(x)), scale=sigma)
 
     def step():
