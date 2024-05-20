@@ -33,11 +33,11 @@ def get_cost_matrix(adj, priors, As, Bs, Q, R, bs):
 
     costs_matrix = adj.copy()
 
-    for i in range(costs_matrix.shape[1]):
-        for j in range(costs_matrix.shape[0]):
+    for i in range(costs_matrix.shape[0]):
+        for j in range(costs_matrix.shape[1]):
             if bool(adj[i, j]):  # if transition allowed
-                x_0 = priors[j]
-                x_ref = priors[i]
+                x_0 = priors[i]
+                x_ref = priors[j]
                 costs_matrix[i, j] = get_trajectory_cost(As[j], Bs[j], Q, R, bs[j], x_0, x_ref)
 
     # make negative
