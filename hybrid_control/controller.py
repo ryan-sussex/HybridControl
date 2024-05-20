@@ -99,6 +99,8 @@ class Controller:
             else [np.ones(self.obs_dim) for i in range(self.n_modes)]
         )
         self.stds = [sigma.dot(sigma) for sigma in self.Sigmas]
+        self.same_mode = 0 
+
 
     @property
     def reward_pos_cts(self):
@@ -181,9 +183,12 @@ class Controller:
                 "first obs, picking action "
                 f"{self.discrete_action} based on uncertainty"
             )
+            
+        self.same_mode +=1
 
-        if (self.prev_mode is not None) and (idx_mode != self.prev_mode):
-            # If new mode, trigger discrete planner
+        if (self.prev_mode is not None) and (idx_mode != self.prev_mode) or (self.same_mode > 100):
+            # If new mode or same mode for more than 100 steps, trigger discrete planner
+            logger.info(f'Same mode for {self.same_mode} steps, max dwell-time reached = {self.same_mode > 100}')
             logger.info(f"  Inferred mode {idx_mode}")
             logger.info("Entered new mode, triggering discrete planner")
             if idx_mode == self.discrete_action:
@@ -191,6 +196,8 @@ class Controller:
                     "  Discrete Goal "
                     f"{self.agent.mode_action_names[self.discrete_action]} Achieved!"
                 )
+            
+            self.same_mode = 0 # reset max dwell time 
 
             obs = pu.to_obj_array(probs)
             self.agent.E = get_prior_over_policies(
