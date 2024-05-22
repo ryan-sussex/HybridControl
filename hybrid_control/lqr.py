@@ -1,9 +1,13 @@
 from typing import Optional
 from functools import wraps
+import logging
 
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.linalg import solve_discrete_are
+
+
+logger = logging.getLogger(__name__)
 
 
 class LinearController:
@@ -88,15 +92,38 @@ class LinearController:
         self.Ks = [calculate_gain(self.A, self.B, self.Q, self.R, S) for S in Ss]
         return self.finite_horizon(x, t, T)
 
+    def minimum_time(self, x_0, t_max: int = 100) -> int:
+        logger.debug("Starting minimum time calculatio..")
+        cost_per_time = []
+        for t in range(t_max):
+            cost_t = self.get_trajectory_cost(x_0)
+            cost_per_time.append(cost_t)
+            logger.debug(f"..cost for time {t}: {cost_t}")
+        return np.argmin(cost_per_time)
+
     @coordinate_transform
     def instantaneous_cost(self, x, u):
         return x.T @ self.Q @ x + u.T @ self.R @ u
 
     @coordinate_transform
-    def simulate_forwards(self, x, u, scale=.2):
+    def simulate_forwards(self, x, u, scale=0):
         noise = np.random.normal(np.zeros(x.shape), scale=0.2)
         x = self.A @ x + self.B @ u + noise
         return x
+
+    def get_trajectory_cost(self, x_0, T: int = 100):
+        # TODO use constraints in simulation to calculate this cost
+        accum_cost = 0
+        # Simulate system
+        x = x_0
+        traj = [x]
+        for t in range(T):
+            u = self.finite_horizon(x, t=t, T=T)
+            accum_cost += self.instantaneous_cost(x, u)
+            x = self.simulate_forwards(x, u)
+            traj.append(x)
+        return accum_cost
+
 
 
 def create_biased_matrices(A: np.ndarray, B: np.ndarray, Q, R, bias: np.ndarray, Q_f):
@@ -161,22 +188,12 @@ def backwards_riccati(A, B, Q, R, S):
     )
 
 
-def get_trajectory_cost(lc: LinearController, x_0):
-    T = 100  # TODO: magic number
-    # TODO use constraints in simulation to calculate this cost
-    accum_cost = 0
-    # Simulate system
-    x = x_0
-    traj = [x]
-    for t in range(T):
-        u = lc.finite_horizon(x, t=t, T=T)
-        accum_cost += lc.instantaneous_cost(x, u)
-        x = lc.simulate_forwards(x, u)
-        traj.append(x)
-    return accum_cost
+
 
 
 if __name__ == "__main__":
+    import logging
+    logging.basicConfig(level=logging.INFO)
 
     T = 100
 
@@ -196,7 +213,7 @@ if __name__ == "__main__":
     B = Bs[1]
     b = np.ones(A.shape[0], dtype="float") * -5
 
-    Q = np.eye(2) * 20
+    Q = np.eye(2) * 100
     R = np.eye(2)
     Q_f = np.eye(2) * 1000
 
@@ -206,14 +223,18 @@ if __name__ == "__main__":
     lc = LinearController(A, B, Q, R, b=b, Q_f=Q_f)
     lc = convert_to_servo(lc, x_ref)
 
+
+    minimum_time = lc.minimum_time(x_0)
+    print(minimum_time)
+
     accum_cost = 0
     # Simulate system
     x = x_0
     traj = [x]
-    for t in range(T):
-        u = lc.finite_horizon(x, t=t, T=T)
+    for t in range(minimum_time):
+        u = lc.finite_horizon(x, t=t, T=minimum_time)
         accum_cost += lc.instantaneous_cost(x, u)
-        x = A @ x + B @ u + np.random.normal([0, 0], scale=0.1) + b
+        x = A @ x + B @ u + b + np.random.normal([0, 0], scale=0.1)
         traj.append(x)
 
     X = np.column_stack(traj)

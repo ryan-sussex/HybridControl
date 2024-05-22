@@ -8,7 +8,7 @@ import math
 from hybrid_control.lqr import get_trajectory_cost, LinearController
 
 
-def get_cost_matrix(adj, priors, controllers: List[LinearController]):
+def get_cost_matrix(adj, priors, controllers: List[List[LinearController]]):
     """
     Parameters
     ----------
@@ -38,8 +38,7 @@ def get_cost_matrix(adj, priors, controllers: List[LinearController]):
         for j in range(costs_matrix.shape[1]):
             if bool(adj[i, j]):  # if transition allowed
                 x_0 = priors[i]
-                x_ref = priors[j]
-                costs_matrix[i, j] = get_trajectory_cost(controllers[i][j], x_0)
+                costs_matrix[i, j] = controllers[i][j].get_trajectory_cost(x_0)
 
     # make negative
     costs_matrix = costs_matrix * -1
