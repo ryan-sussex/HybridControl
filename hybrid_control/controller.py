@@ -17,10 +17,10 @@ from hybrid_control.costs import get_cost_matrix, get_prior_over_policies
 logger = logging.getLogger("controller")
 
 
-Q_F_SCALE = 100
+Q_F_SCALE = 1000
 Q_SCALE = 0
 R_SCALE = 1000
-LQR_HORIZON = 100
+LQR_HORIZON = 500
 
 
 class Controller:

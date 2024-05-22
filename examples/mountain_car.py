@@ -33,7 +33,7 @@ if __name__ == "__main__":
     N_STEPS = 100
 
     controller = get_initial_controller(OBS_DIM, ACT_DIM, K, max_u=max_u, min_u=min_u)
-    # controller.set_known_reward(100, pos=REWARD_LOC)
+    controller.set_known_reward(100, pos=REWARD_LOC)
     action = controller.policy()
 
     obs = []

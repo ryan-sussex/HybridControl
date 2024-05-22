@@ -3,7 +3,7 @@ from typing import List
 import numpy as np
 import matplotlib.pyplot as plt
 
-from hybrid_control.environments.library import get_2d_spiral
+from hybrid_control.environments.library import get_2d_spiral, get_skewed_spiral
 from hybrid_control.controller import Controller
 from hybrid_control.plotting.utils import plot_suite
 
@@ -30,8 +30,8 @@ def get_first_bounding_box(As, Bs, u_max):
     A = As[0]
     B = Bs[0]
     max_u = np.array([u_max, u_max])
-    x_max = np.linalg.pinv(np.eye(A.shape[0])-A) @ B @ max_u
-    x_min = np.linalg.pinv(np.eye(A.shape[0])-A) @ B @ (-max_u)
+    x_max = np.linalg.pinv(np.eye(A.shape[0]) - A) @ B @ max_u
+    x_min = np.linalg.pinv(np.eye(A.shape[0]) - A) @ B @ (-max_u)
     return x_max, x_min
 
 
@@ -43,27 +43,22 @@ def extend_modes(As: List, Bs: List, W, b, u_max: float):
     max_u = np.array([u_max, u_max])
     # mixed_u  = np.array([u_max, -u_max])
     W = np.block(
-        [
-            [W], 
-            [-(np.eye(n_states) - As[0]) - W[0]],
-            [(np.eye(n_states) - As[0]) + W[0]]
-        ]
+        [[W], [-(np.eye(n_states) - As[0]) - W[0]], [(np.eye(n_states) - As[0]) + W[0]]]
     )
     print(W.shape)
     # bs = np.block([b.T, -Bs[0]@max_u])
-    bs = np.block([b.T, -Bs[0]@max_u, -Bs[0]@max_u])
+    bs = np.block([b.T, -Bs[0] @ max_u, -Bs[0] @ max_u])
     print(bs.shape)
     return As, Bs, W, bs
 
 
-
 if __name__ == "__main__":
-    # ENV_STEPS = 50
-    ENV_STEPS = 101
-    REWARD_POS = np.array([1,1])
+    ENV_STEPS = 500
+    REWARD_POS = np.array([0.5, 0])
     U_MAX = 1
 
-    env = get_2d_spiral(u_max=U_MAX)
+    # env = get_2d_spiral(u_max=U_MAX)
+    env = get_skewed_spiral(u_max=U_MAX)
 
     W, b, As, Bs = estimated_system_params(env)
 
@@ -72,40 +67,30 @@ if __name__ == "__main__":
     print(len(As))
 
     controller = Controller(
-        As=As, 
-        Bs=Bs, 
-        bs=None, 
-        W_u=None, 
-        W_x=W, 
-        b=b,
-        reward_pos_cts=REWARD_POS
+        As=As, Bs=Bs, bs=None, W_u=None, W_x=W, b=b, reward_pos_cts=REWARD_POS
     )
 
-    print(
-        "minimum time:",
-        controller.final_controller.minimum_time(x_0=np.array([0,0]))
-    )
+    # print(
+    #     "minimum time:", controller.final_controller.minimum_time(x_0=np.array([0, 0]))
+    # )
 
     print("COST", controller.cost_matrix)
 
-    action = p_0(env)
+    action = controller.policy()
 
     obs = []
     actions = []
     discrete_actions = []
     for i in range(ENV_STEPS):
-        
-        
+
         # plot_tensor_heatmap(controller.agent.B[0])
-        
         observation, reward, terminated, truncated, info = env.step(action)
 
         obs.append(observation)
         actions.append(action)
         discrete_actions.append(controller.discrete_action)
-        
-        action = controller.policy(observation, action)
 
+        action = controller.policy(observation, action)
 
     plot_suite(
         controller,
@@ -114,9 +99,10 @@ if __name__ == "__main__":
         discrete_actions=discrete_actions,
     )
     plt.show()
-    
+
     # Simple report
     from hybrid_control.logisitc_reg import mode_posterior
+
     W = np.block([[linear.w] for linear in env.linear_systems])
     b = np.block([linear.b for linear in env.linear_systems])
     print("Trajectory", obs)
