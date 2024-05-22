@@ -67,7 +67,7 @@ if __name__ == "__main__":
 
     W, b, As, Bs = estimated_system_params(env)
 
-    As, Bs, W, b = extend_modes(As, Bs, W, b, u_max=U_MAX)
+    # As, Bs, W, b = extend_modes(As, Bs, W, b, u_max=U_MAX)
 
     print(len(As))
 

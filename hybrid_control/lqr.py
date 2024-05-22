@@ -38,7 +38,7 @@ class LinearController:
             x_ref = np.zeros(A.shape[0])
         if Q_f is None:
             Q_f = Q
-        
+
         print("Q_f", Q_f)
         self.b = b
 
@@ -83,9 +83,7 @@ class LinearController:
         Ss[T - 1] = np.zeros(self.A.shape)
         for i in range(T):
             Q = self.Q_f if i == 0 else self.Q
-            Ss[T - i - 2] = backwards_riccati(
-                self.A, self.B, Q, self.R, Ss[T - i - 1]
-            )
+            Ss[T - i - 2] = backwards_riccati(self.A, self.B, Q, self.R, Ss[T - i - 1])
 
         self.Ks = [calculate_gain(self.A, self.B, self.Q, self.R, S) for S in Ss]
         return self.finite_horizon(x, t, T)
@@ -93,6 +91,12 @@ class LinearController:
     @coordinate_transform
     def instantaneous_cost(self, x, u):
         return x.T @ self.Q @ x + u.T @ self.R @ u
+
+    @coordinate_transform
+    def simulate_forwards(self, x, u, scale=.2):
+        noise = np.random.normal(np.zeros(x.shape), scale=0.2)
+        x = self.A @ x + self.B @ u + noise
+        return x
 
 
 def create_biased_matrices(A: np.ndarray, B: np.ndarray, Q, R, bias: np.ndarray, Q_f):
@@ -157,11 +161,9 @@ def backwards_riccati(A, B, Q, R, S):
     )
 
 
-def get_trajectory_cost(A, B, Q, R, b, x_0, x_ref):
+def get_trajectory_cost(lc: LinearController, x_0):
     T = 100  # TODO: magic number
     # TODO use constraints in simulation to calculate this cost
-    lc = LinearController(A, B, Q, R)
-    lc = convert_to_servo(lc, x_ref)
     accum_cost = 0
     # Simulate system
     x = x_0
@@ -169,7 +171,7 @@ def get_trajectory_cost(A, B, Q, R, b, x_0, x_ref):
     for t in range(T):
         u = lc.finite_horizon(x, t=t, T=T)
         accum_cost += lc.instantaneous_cost(x, u)
-        x = A @ x + B @ u + np.random.normal(np.zeros(x.shape), scale=0.2) - b
+        x = lc.simulate_forwards(x, u)
         traj.append(x)
     return accum_cost
 
@@ -195,7 +197,7 @@ if __name__ == "__main__":
     b = np.ones(A.shape[0], dtype="float") * -5
 
     Q = np.eye(2) * 20
-    R = np.eye(2) 
+    R = np.eye(2)
     Q_f = np.eye(2) * 1000
 
     x_0 = np.array([0, 7.29713065])

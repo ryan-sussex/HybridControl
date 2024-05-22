@@ -17,9 +17,10 @@ from hybrid_control.costs import get_cost_matrix, get_prior_over_policies
 logger = logging.getLogger("controller")
 
 
-Q_SCALE = 100
+Q_F_SCALE = 100
+Q_SCALE = 1
 R_SCALE = 1
-LQR_HORIZON = 5
+LQR_HORIZON = 10
 
 
 class Controller:
@@ -83,10 +84,7 @@ class Controller:
         self.cost_matrix = get_cost_matrix(
             self.adj,
             self.mode_priors,
-            As,
-            Bs,
-            **get_default_lqr_costs(self.obs_dim, self.action_dim),
-            bs=bs,
+            self.cts_ctrs
         )
         self.discrete_action = 0
         self._rslds: Optional[SLDS] = rslds  # Store rslds for convenicence
@@ -99,8 +97,7 @@ class Controller:
             else [np.ones(self.obs_dim) for i in range(self.n_modes)]
         )
         self.stds = [sigma.dot(sigma) for sigma in self.Sigmas]
-        self.same_mode = 0 
-
+        self.same_mode = 0
 
     @property
     def reward_pos_cts(self):
@@ -183,12 +180,18 @@ class Controller:
                 "first obs, picking action "
                 f"{self.discrete_action} based on uncertainty"
             )
-            
-        self.same_mode +=1
 
-        if (self.prev_mode is not None) and (idx_mode != self.prev_mode) or (self.same_mode > 100):
+        self.same_mode += 1
+
+        if (
+            (self.prev_mode is not None)
+            and (idx_mode != self.prev_mode)
+            or (self.same_mode > 100)
+        ):
             # If new mode or same mode for more than 100 steps, trigger discrete planner
-            logger.info(f'Same mode for {self.same_mode} steps, max dwell-time reached = {self.same_mode > 100}')
+            logger.info(
+                f"Same mode for {self.same_mode} steps, max dwell-time reached = {self.same_mode > 100}"
+            )
             logger.info(f"  Inferred mode {idx_mode}")
             logger.info("Entered new mode, triggering discrete planner")
             if idx_mode == self.discrete_action:
@@ -196,8 +199,8 @@ class Controller:
                     "  Discrete Goal "
                     f"{self.agent.mode_action_names[self.discrete_action]} Achieved!"
                 )
-            
-            self.same_mode = 0 # reset max dwell time 
+
+            self.same_mode = 0  # reset max dwell time
 
             obs = pu.to_obj_array(probs)
             self.agent.E = get_prior_over_policies(
@@ -212,7 +215,7 @@ class Controller:
             logger.info(f"  max reward @ {self.reward_pos_dsc} @ {self.reward_pos_cts}")
 
         self.prev_mode = idx_mode
-        
+
         if (idx_mode == self.reward_pos_dsc) and (self.discrete_action == idx_mode):
             # If in reward location, and planner discrete wishes to stay
             # Attempt to stabilise at reward location.
@@ -260,10 +263,9 @@ class Controller:
         )
 
 
-def get_max_connected_std(adj: np.ndarray, stds:np.ndarray, idx: int) -> int:
+def get_max_connected_std(adj: np.ndarray, stds: np.ndarray, idx: int) -> int:
     sigmas = [
-        std + np.random.normal(0, 1) 
-        if check_is_connected(adj, i, idx) else -np.inf
+        std + np.random.normal(0, 1) if check_is_connected(adj, i, idx) else -np.inf
         for i, std in enumerate(stds)
     ]
     # break ties arbritrarily
@@ -294,7 +296,9 @@ def get_default_lqr_costs(obs_dims, action_dims):
     Dict: (Q, R)
     """
     return dict(
-        Q=np.eye(obs_dims) * Q_SCALE, R=np.eye(action_dims) * R_SCALE
+        Q=np.eye(obs_dims) * Q_SCALE,
+        R=np.eye(action_dims) * R_SCALE,
+        Q_f=np.eye(obs_dims) * Q_F_SCALE,
     )  # TODO: Magic numbers
 
 
@@ -313,6 +317,7 @@ def get_all_cts_controllers(As, Bs, bs, mode_priors: List):
     Returns list of lists, where element list[i][j] is the controller
     for going from region i, to the prior specified by mode_prior[j]
     """
+    logger.info("Getting continuous controllers")
     n_modes = len(mode_priors)
     return [
         [get_cts_controller(As, Bs, bs, i, j, mode_priors) for i in range(n_modes)]
@@ -321,6 +326,7 @@ def get_all_cts_controllers(As, Bs, bs, mode_priors: List):
 
 
 def get_final_controller(As, Bs, bs, reward_pos_cts, reward_pos_discrete):
+    logger.info("Getting final controller")
     lc = LinearController(
         As[reward_pos_discrete],
         Bs[reward_pos_discrete],
