@@ -18,9 +18,9 @@ logger = logging.getLogger("controller")
 
 
 Q_F_SCALE = 100
-Q_SCALE = 1
-R_SCALE = 1
-LQR_HORIZON = 10
+Q_SCALE = 0
+R_SCALE = 1000
+LQR_HORIZON = 100
 
 
 class Controller:
@@ -221,7 +221,7 @@ class Controller:
             # Attempt to stabilise at reward location.
             logger.info("Attempting to stabilise at max reward")
             action = self.final_controller.finite_horizon(
-                observation, t=0, T=LQR_HORIZON
+                observation, t=self.same_mode, T=LQR_HORIZON
             )
             action = bound_action(action, self.max_u, self.min_u)
             logger.info(f" ..Returning action {action}")

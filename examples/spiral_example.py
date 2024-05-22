@@ -59,8 +59,8 @@ def extend_modes(As: List, Bs: List, W, b, u_max: float):
 
 if __name__ == "__main__":
     # ENV_STEPS = 50
-    ENV_STEPS = 50
-    REWARD_POS = np.array([1,1]) * 4
+    ENV_STEPS = 101
+    REWARD_POS = np.array([1,1])
     U_MAX = 1
 
     env = get_2d_spiral(u_max=U_MAX)
@@ -80,6 +80,12 @@ if __name__ == "__main__":
         b=b,
         reward_pos_cts=REWARD_POS
     )
+
+    print(
+        "minimum time:",
+        controller.final_controller.minimum_time(x_0=np.array([0,0]))
+    )
+
     print("COST", controller.cost_matrix)
 
     action = p_0(env)

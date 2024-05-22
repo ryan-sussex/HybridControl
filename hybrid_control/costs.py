@@ -5,7 +5,7 @@ from pymdp.maths import softmax as sm
 import math
 
 
-from hybrid_control.lqr import get_trajectory_cost, LinearController
+from hybrid_control.lqr import LinearController
 
 
 def get_cost_matrix(adj, priors, controllers: List[List[LinearController]]):

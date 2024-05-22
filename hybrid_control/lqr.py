@@ -43,7 +43,6 @@ class LinearController:
         if Q_f is None:
             Q_f = Q
 
-        print("Q_f", Q_f)
         self.b = b
 
         self.A, self.B, self.Q, self.R, self.Q_f = create_biased_matrices(

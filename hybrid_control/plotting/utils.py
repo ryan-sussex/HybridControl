@@ -229,7 +229,7 @@ def plot_reward(
     if ax is None:
         fig = plt.figure(figsize=FIGSIZE)
         ax = fig.add_subplot(111)
-    ax.scatter(controller.reward_pos_cts[0], controller.reward_pos_cts[1], s=100, marker="v", label="Reward", )
+    ax.scatter(controller.reward_pos_cts[0], controller.reward_pos_cts[1], s=200, marker="v", label="Reward", color="black")
     ax.set_xlim(xlim)
     ax.set_ylim(ylim)
     ax.set_title("Trajectory dims(0,1)",)
