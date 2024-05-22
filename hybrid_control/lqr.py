@@ -26,19 +26,26 @@ class LinearController:
         Q: np.ndarray,
         R: np.ndarray,
         b: Optional[np.ndarray] = None,
+        Q_f: Optional[np.ndarray] = None,
         c=None,
         d=None,
         v=None,
         x_ref=None,
     ) -> None:
-        self.b = b
         if b is None:
-            self.b = np.zeros(A.shape[0])
-
-        self.A, self.B, self.Q, self.R = create_biased_matrices(A, B, Q, R, self.b)
-
+            b = np.zeros(A.shape[0])
         if x_ref is None:
-            self.x_ref = np.zeros(A.shape[0])
+            x_ref = np.zeros(A.shape[0])
+        if Q_f is None:
+            Q_f = Q
+        
+        print("Q_f", Q_f)
+        self.b = b
+
+        self.A, self.B, self.Q, self.R, self.Q_f = create_biased_matrices(
+            A, B, Q, R, self.b, Q_f
+        )
+        self.x_ref = x_ref
 
         self.c = c
         self.d = d
@@ -75,8 +82,9 @@ class LinearController:
         Ss = [None for _ in range(T)]
         Ss[T - 1] = np.zeros(self.A.shape)
         for i in range(T):
+            Q = self.Q_f if i == 0 else self.Q
             Ss[T - i - 2] = backwards_riccati(
-                self.A, self.B, self.Q, self.R, Ss[T - i - 1]
+                self.A, self.B, Q, self.R, Ss[T - i - 1]
             )
 
         self.Ks = [calculate_gain(self.A, self.B, self.Q, self.R, S) for S in Ss]
@@ -87,7 +95,7 @@ class LinearController:
         return x.T @ self.Q @ x + u.T @ self.R @ u
 
 
-def create_biased_matrices(A: np.ndarray, B: np.ndarray, Q, R, bias: np.ndarray):
+def create_biased_matrices(A: np.ndarray, B: np.ndarray, Q, R, bias: np.ndarray, Q_f):
     """
     Translates the linear system to the affine system in (x-x_ref) coords
         z = [x, 1]
@@ -111,7 +119,10 @@ def create_biased_matrices(A: np.ndarray, B: np.ndarray, Q, R, bias: np.ndarray)
 
     Q_out = np.zeros(A.shape)
     Q_out[: Q.shape[0], : Q.shape[1]] = Q
-    return A, B, Q_out, R
+
+    Q_f_out = np.zeros(A.shape)
+    Q_f_out[: Q_f.shape[0], : Q_f.shape[1]] = Q_f
+    return A, B, Q_out, R, Q_f_out
 
 
 def convert_to_servo(linear_controller: LinearController, x_ref) -> LinearController:
@@ -183,13 +194,14 @@ if __name__ == "__main__":
     B = Bs[1]
     b = np.ones(A.shape[0], dtype="float") * -5
 
-    Q = np.eye(2) * 100
-    R = np.eye(2)
+    Q = np.eye(2) * 20
+    R = np.eye(2) 
+    Q_f = np.eye(2) * 1000
 
     x_0 = np.array([0, 7.29713065])
-    x_ref = np.array([0, 0])
+    x_ref = np.array([2, 0])
 
-    lc = LinearController(A, B, Q, R, b=b)
+    lc = LinearController(A, B, Q, R, b=b, Q_f=Q_f)
     lc = convert_to_servo(lc, x_ref)
 
     accum_cost = 0
@@ -199,7 +211,7 @@ if __name__ == "__main__":
     for t in range(T):
         u = lc.finite_horizon(x, t=t, T=T)
         accum_cost += lc.instantaneous_cost(x, u)
-        x = A @ x + B @ u + np.random.normal([0, 0], scale=0.2) + b
+        x = A @ x + B @ u + np.random.normal([0, 0], scale=0.1) + b
         traj.append(x)
 
     X = np.column_stack(traj)
@@ -218,5 +230,5 @@ if __name__ == "__main__":
             marker="o",
             linestyle="none",
         )
-    print(x)
+    print("x final", X[:, -2])
     plt.show()
