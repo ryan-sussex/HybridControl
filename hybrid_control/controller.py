@@ -230,7 +230,7 @@ class Controller:
         # Otherwise find continuous action
         cts_ctr = self.cts_ctrs[self.discrete_action][idx_mode]
         action = cts_ctr.finite_horizon(
-            observation, t=0, T=LQR_HORIZON
+            observation, t=self.same_mode, T=LQR_HORIZON
         )  # TODO: magic numbers
         action = bound_action(action, self.max_u, self.min_u)
         logger.debug(f" ..Returning action {action}")
