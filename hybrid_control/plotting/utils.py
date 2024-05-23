@@ -339,17 +339,27 @@ def plot_efe(controller: Controller):
         q_pi = clean_q_pi(q_pi, controller.adj, idx_mode, controller.agent)
         _plot_efe(efe, q_pi, controller.agent.E, utility, state_ig, param_ig, ax=ax)
         ax.set_title(f"Components of EFE for mode {idx_mode}")
-
-
+        
+def plot_total_reward(rewards):
+    plt.plot(np.linspace(min(rewards), max(rewards), len(rewards)), rewards)
+    plt.title('Reward over time')
+    plt.show()
+    
+def plot_coverage(obs):
+    obs_all = np.squeeze(obs)
+    plt.scatter(obs_all[:,0], obs_all[:,1], s=0.1)
+    plt.title('state space coverage')
+    plt.show()
 
 def plot_suite(
     controller: Controller,
     obs: np.ndarray,
     actions: np.ndarray,
     discrete_actions: Optional[List[int]] = None,
+    rewards: Optional[List[int]] = None,
     start=0,
     end=-1,
-    level=3
+    level=3,
 ):
     obs, actions, discrete_actions = get_chunk(
         obs, actions, discrete_actions, start=start, end=end
@@ -384,8 +394,10 @@ def plot_suite(
     # Graphs
     draw_mode_graph(controller)
     draw_cost_graph(controller)
+
     # EFE
     plot_efe(controller)
+    
     return
 
 
@@ -423,6 +435,10 @@ def data_to_array(data: List, actions: List):
     # data = add_derivatives(data)
     # data = np.hstack((data, actions[:data.shape[0]]))
     return data, actions
+
+
+
+
 
 
 if __name__ == "__main__":

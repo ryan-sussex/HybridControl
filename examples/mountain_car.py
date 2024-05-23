@@ -17,6 +17,7 @@ from hybrid_control.plotting.utils import *
 from utils import create_video
 
 
+
 '''
 note: Turned om state IG
 '''
@@ -27,10 +28,15 @@ logging.basicConfig(level=logging.INFO)
 
 REWARD_LOC = np.array([.5, 5.])
 
-if __name__ == "__main__":
-    ENV_STEPS = 10000
-    REFIT_EVERY = 1000
 
+def main():
+
+    # ENV_STEPS = 10000
+    # REFIT_EVERY = 1000
+    
+    ENV_STEPS = 100
+    REFIT_EVERY = 100
+    
     env = gym.make('MountainCarContinuous-v0', render_mode="rgb_array")
     env.reset()
     max_u = env.action_space.high
@@ -56,8 +62,8 @@ if __name__ == "__main__":
         frames.append(env.render())
         accum_reward+=reward
         rewards.append(accum_reward)
+        
         # if reward reached more than twice in one session then don't refit
-
         if terminated or truncated:
             if terminated > 0:
                 reward_reached +=1
@@ -70,34 +76,37 @@ if __name__ == "__main__":
 
         action = controller.policy(observation, action)
         
-        if i % REFIT_EVERY == REFIT_EVERY - 1 :#and reward_reached < 3: # <3
+        if i % REFIT_EVERY == REFIT_EVERY - 1 and reward_reached < 2: # <3
             reward_reached = 0
             create_video(frames, 60, "./video/out")
             try:
-                plot_suite(
-                    controller,
-                    np.stack(obs),
-                    np.stack(actions),
-                    discrete_actions=discrete_actions,
-                    start=i + 1 - REFIT_EVERY,
-                    level=2
-                )
-                plt.show()
+                # plot_suite(
+                #     controller,
+                #     np.stack(obs),
+                #     np.stack(actions),
+                #     discrete_actions=discrete_actions,
+                #     rewards=rewards,
+                #     start=i + 1 - REFIT_EVERY,
+                #     level=2,
+                # )
+                # plt.show()
                 controller = controller.estimate_and_identify(
                     np.stack(obs), np.stack(actions)
                 )
+                
+
             except Exception as e:
                 pass
 
     create_video(frames, 60, "./video/out")
     env.close()
     
-plt.plot(np.linspace(min(rewards), max(rewards), len(rewards)), rewards)
-plt.title('Reward over time')
-plt.show()
-
-obs_all = np.squeeze(obs)
-plt.plot(obs_all[:,0], obs_all[:,1])
-plt.title('state space coverage')
-plt.show()
-
+    plot_total_reward(rewards)
+    plot_coverage(obs)
+    
+    
+    return np.squeeze(obs), np.array(rewards)
+    
+if __name__ == "__main__":
+    obs, rewards = main()
+ 

@@ -46,7 +46,7 @@ if __name__ == "__main__":
     POLAR = False
     REWARD_LOC = np.array([0, 0.]) if POLAR else np.array([0, 1, 0])
     
-    ENV_STEPS = 10000
+    ENV_STEPS = 500
     REFIT_EVERY = 1000
 
     env = gym.make("Pendulum-v1", g=9.81, render_mode="rgb_array")
@@ -64,6 +64,9 @@ if __name__ == "__main__":
     controller = get_initial_controller(OBS_DIM, ACT_DIM, K, max_u=max_u, min_u=min_u)
     # controller.set_known_reward(100, pos=REWARD_LOC)
     action = controller.policy()
+    
+    accum_reward = 0
+    rewards = []
 
     obs = []
     actions = []
@@ -74,6 +77,9 @@ if __name__ == "__main__":
         observation, reward, terminated, truncated, info = env.step(action)
         observation = preprocess(observation, polar=POLAR)
         frames.append(env.render())
+        
+        accum_reward += reward
+        rewards.append(accum_reward)
 
         if terminated or truncated:
             observation, info = env.reset()
@@ -107,11 +113,5 @@ if __name__ == "__main__":
     create_video(frames, 60, "./video/out")
     env.close()
 
-plt.plot(np.linspace(min(rewards), max(rewards), len(rewards)), rewards)
-plt.title('Reward over time')
-plt.show()
-
-obs_all = np.squeeze(obs)
-plt.plot(obs_all[:,0], obs_all[:,1])
-plt.title('state space coverage')
-plt.show()
+plot_coverage(obs)
+plot_total_reward(rewards)
