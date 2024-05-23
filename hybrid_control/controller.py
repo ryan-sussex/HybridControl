@@ -6,6 +6,7 @@ from pymdp import utils as pu
 
 from ssm import SLDS
 
+from hybrid_control.config import param_config
 from hybrid_control.algebra import extract_adjacency
 from hybrid_control import observer_transition_model as otm
 from hybrid_control.logisitc_reg import mode_posterior
@@ -17,10 +18,11 @@ from hybrid_control.costs import get_cost_matrix, get_prior_over_policies
 logger = logging.getLogger("controller")
 
 
-Q_F_SCALE = 1000
-Q_SCALE = 0
-R_SCALE = 1000
-LQR_HORIZON = 500
+Q_F_SCALE = param_config.getint("Q_F_SCALE", 1000)
+Q_SCALE = param_config.getint("Q_SCALE", 0)
+R_SCALE = param_config.getint("R_SCALE", 10000)
+LQR_HORIZON = param_config.getint("LQR_HORIZON", 100)
+MAX_DWELL = param_config.getint("MAX_DWELL", 100)
 
 
 class Controller:
@@ -186,11 +188,11 @@ class Controller:
         if (
             (self.prev_mode is not None)
             and (idx_mode != self.prev_mode)
-            or (self.same_mode > 100)
+            or (self.same_mode > MAX_DWELL)
         ):
             # If new mode or same mode for more than 100 steps, trigger discrete planner
             logger.info(
-                f"Same mode for {self.same_mode} steps, max dwell-time reached = {self.same_mode > 100}"
+                f"Same mode for {self.same_mode} steps, max dwell-time reached = {self.same_mode > MAX_DWELL}"
             )
             logger.info(f"  Inferred mode {idx_mode}")
             logger.info("Entered new mode, triggering discrete planner")
@@ -231,7 +233,7 @@ class Controller:
         cts_ctr = self.cts_ctrs[self.discrete_action][idx_mode]
         action = cts_ctr.finite_horizon(
             observation, t=self.same_mode, T=LQR_HORIZON
-        )  # TODO: magic numbers
+        )
         action = bound_action(action, self.max_u, self.min_u)
         logger.debug(f" ..Returning action {action}")
         return action
@@ -299,7 +301,7 @@ def get_default_lqr_costs(obs_dims, action_dims):
         Q=np.eye(obs_dims) * Q_SCALE,
         R=np.eye(action_dims) * R_SCALE,
         Q_f=np.eye(obs_dims) * Q_F_SCALE,
-    )  # TODO: Magic numbers
+    )  
 
 
 def get_cts_controller(As, Bs, bs, i: int, j: int, mode_priors: List):
