@@ -1,9 +1,13 @@
 from typing import Optional
 from functools import wraps
+import logging
 
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.linalg import solve_discrete_are
+
+
+logger = logging.getLogger(__name__)
 
 
 class LinearController:
@@ -26,19 +30,25 @@ class LinearController:
         Q: np.ndarray,
         R: np.ndarray,
         b: Optional[np.ndarray] = None,
+        Q_f: Optional[np.ndarray] = None,
         c=None,
         d=None,
         v=None,
         x_ref=None,
     ) -> None:
-        self.b = b
         if b is None:
-            self.b = np.zeros(A.shape[0])
-
-        self.A, self.B, self.Q, self.R = create_biased_matrices(A, B, Q, R, self.b)
-
+            b = np.zeros(A.shape[0])
         if x_ref is None:
-            self.x_ref = np.zeros(A.shape[0])
+            x_ref = np.zeros(A.shape[0])
+        if Q_f is None:
+            Q_f = Q
+
+        self.b = b
+
+        self.A, self.B, self.Q, self.R, self.Q_f = create_biased_matrices(
+            A, B, Q, R, self.b, Q_f
+        )
+        self.x_ref = x_ref
 
         self.c = c
         self.d = d
@@ -75,19 +85,47 @@ class LinearController:
         Ss = [None for _ in range(T)]
         Ss[T - 1] = np.zeros(self.A.shape)
         for i in range(T):
-            Ss[T - i - 2] = backwards_riccati(
-                self.A, self.B, self.Q, self.R, Ss[T - i - 1]
-            )
+            Q = self.Q_f if i == 0 else self.Q
+            Ss[T - i - 2] = backwards_riccati(self.A, self.B, Q, self.R, Ss[T - i - 1])
 
         self.Ks = [calculate_gain(self.A, self.B, self.Q, self.R, S) for S in Ss]
         return self.finite_horizon(x, t, T)
+
+    def minimum_time(self, x_0, t_max: int = 100) -> int:
+        logger.debug("Starting minimum time calculatio..")
+        cost_per_time = []
+        for t in range(t_max):
+            cost_t = self.get_trajectory_cost(x_0)
+            cost_per_time.append(cost_t)
+            logger.debug(f"..cost for time {t}: {cost_t}")
+        return np.argmin(cost_per_time)
 
     @coordinate_transform
     def instantaneous_cost(self, x, u):
         return x.T @ self.Q @ x + u.T @ self.R @ u
 
+    @coordinate_transform
+    def simulate_forwards(self, x, u, scale=0):
+        noise = np.random.normal(np.zeros(x.shape), scale=0.2)
+        x = self.A @ x + self.B @ u + noise
+        return x
 
-def create_biased_matrices(A: np.ndarray, B: np.ndarray, Q, R, bias: np.ndarray):
+    def get_trajectory_cost(self, x_0, T: int = 100):
+        # TODO use constraints in simulation to calculate this cost
+        accum_cost = 0
+        # Simulate system
+        x = x_0
+        traj = [x]
+        for t in range(T):
+            u = self.finite_horizon(x, t=t, T=T)
+            accum_cost += self.instantaneous_cost(x, u)
+            x = self.simulate_forwards(x, u)
+            traj.append(x)
+        return accum_cost
+
+
+
+def create_biased_matrices(A: np.ndarray, B: np.ndarray, Q, R, bias: np.ndarray, Q_f):
     """
     Translates the linear system to the affine system in (x-x_ref) coords
         z = [x, 1]
@@ -111,7 +149,10 @@ def create_biased_matrices(A: np.ndarray, B: np.ndarray, Q, R, bias: np.ndarray)
 
     Q_out = np.zeros(A.shape)
     Q_out[: Q.shape[0], : Q.shape[1]] = Q
-    return A, B, Q_out, R
+
+    Q_f_out = np.zeros(A.shape)
+    Q_f_out[: Q_f.shape[0], : Q_f.shape[1]] = Q_f
+    return A, B, Q_out, R, Q_f_out
 
 
 def convert_to_servo(linear_controller: LinearController, x_ref) -> LinearController:
@@ -146,24 +187,12 @@ def backwards_riccati(A, B, Q, R, S):
     )
 
 
-def get_trajectory_cost(A, B, Q, R, b, x_0, x_ref):
-    T = 100  # TODO: magic number
-    # TODO use constraints in simulation to calculate this cost
-    lc = LinearController(A, B, Q, R)
-    lc = convert_to_servo(lc, x_ref)
-    accum_cost = 0
-    # Simulate system
-    x = x_0
-    traj = [x]
-    for t in range(T):
-        u = lc.finite_horizon(x, t=t, T=T)
-        accum_cost += lc.instantaneous_cost(x, u)
-        x = A @ x + B @ u + np.random.normal(np.zeros(x.shape), scale=0.2) - b
-        traj.append(x)
-    return accum_cost
+
 
 
 if __name__ == "__main__":
+    import logging
+    logging.basicConfig(level=logging.INFO)
 
     T = 100
 
@@ -185,21 +214,26 @@ if __name__ == "__main__":
 
     Q = np.eye(2) * 100
     R = np.eye(2)
+    Q_f = np.eye(2) * 1000
 
     x_0 = np.array([0, 7.29713065])
-    x_ref = np.array([0, 0])
+    x_ref = np.array([2, 0])
 
-    lc = LinearController(A, B, Q, R, b=b)
+    lc = LinearController(A, B, Q, R, b=b, Q_f=Q_f)
     lc = convert_to_servo(lc, x_ref)
+
+
+    minimum_time = lc.minimum_time(x_0)
+    print(minimum_time)
 
     accum_cost = 0
     # Simulate system
     x = x_0
     traj = [x]
-    for t in range(T):
-        u = lc.finite_horizon(x, t=t, T=T)
+    for t in range(minimum_time):
+        u = lc.finite_horizon(x, t=t, T=minimum_time)
         accum_cost += lc.instantaneous_cost(x, u)
-        x = A @ x + B @ u + np.random.normal([0, 0], scale=0.2) + b
+        x = A @ x + B @ u + b + np.random.normal([0, 0], scale=0.1)
         traj.append(x)
 
     X = np.column_stack(traj)
@@ -218,5 +252,5 @@ if __name__ == "__main__":
             marker="o",
             linestyle="none",
         )
-    print(x)
+    print("x final", X[:, -2])
     plt.show()

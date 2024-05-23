@@ -20,7 +20,7 @@ class LinearSystem:
         self.b = b
         self.u_max = u_max if u_max is not None else np.inf
 
-    def forward(self, x, u, sigma=.1):
+    def forward(self, x, u, sigma=0):
         u[u > self.u_max] = self.u_max
         u[u < -self.u_max] = -self.u_max
         print(u)

@@ -1,13 +1,14 @@
 import logging
+from typing import List
 import numpy as np
 from pymdp.maths import softmax as sm
 import math
 
 
-from hybrid_control.lqr import get_trajectory_cost
+from hybrid_control.lqr import LinearController
 
 
-def get_cost_matrix(adj, priors, As, Bs, Q, R, bs):
+def get_cost_matrix(adj, priors, controllers: List[List[LinearController]]):
     """
     Parameters
     ----------
@@ -37,12 +38,10 @@ def get_cost_matrix(adj, priors, As, Bs, Q, R, bs):
         for j in range(costs_matrix.shape[1]):
             if bool(adj[i, j]):  # if transition allowed
                 x_0 = priors[i]
-                x_ref = priors[j]
-                costs_matrix[i, j] = get_trajectory_cost(As[j], Bs[j], Q, R, bs[j], x_0, x_ref)
+                costs_matrix[i, j] = controllers[i][j].get_trajectory_cost(x_0)
 
     # make negative
     costs_matrix = costs_matrix * -1
-
     return costs_matrix
 
 
