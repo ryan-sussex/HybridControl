@@ -55,10 +55,12 @@ def extend_modes(As: List, Bs: List, W, b, u_max: float):
 if __name__ == "__main__":
     ENV_STEPS = 500
     REWARD_POS = np.array([1, 1]) * 4
+    REWARD_POS = np.array([.5, 0])
+
     U_MAX = 1
 
-    env = get_2d_spiral(u_max=U_MAX)
-    # env = get_skewed_spiral(u_max=U_MAX)
+    # env = get_2d_spiral(u_max=U_MAX)
+    env = get_skewed_spiral(u_max=U_MAX)
 
     W, b, As, Bs = estimated_system_params(env)
 
