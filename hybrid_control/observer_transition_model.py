@@ -197,7 +197,7 @@ def construct_agent(adj: np.ndarray, rwd_idx: Optional[int]) -> Agent:
         policies=None,
         B_factor_list=None,
         use_utility=True,
-        use_states_info_gain=False,
+        use_states_info_gain=True,
         use_param_info_gain=True,
         action_selection="deterministic",
         lr_pB=10,
