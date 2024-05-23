@@ -10,8 +10,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.special import softmax
 
+from hybrid_control.config import param_config
 
-THRESHOLD = .7
+
+THRESHOLD = param_config.getfloat("PROB_THRESH", 0.7)
 
 
 def generate_prior(

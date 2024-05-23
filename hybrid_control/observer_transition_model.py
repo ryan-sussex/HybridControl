@@ -14,6 +14,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import networkx as nx
 
+
+from hybrid_control.config import param_config
 from hybrid_control.agent import Agent
 
 
@@ -21,7 +23,9 @@ logger = logging.getLogger("discrete_controller")
 
 
 
-REWARD_MAG = 5
+REWARD_MAG = param_config.getint("REWARD_MAG", 5)
+POLICY_LEN = param_config.getint("POLICY_LEN", 3)
+
 
 
 def construct_graph():
@@ -182,14 +186,14 @@ def construct_agent(adj: np.ndarray, rwd_idx: Optional[int]) -> Agent:
     pB.any()[pB.any()==0.5] = 1e10 # make impossible transitions unlearnable 
     # create prior preferences
 
-    C = create_C(num_obs, rwd_idx, pun=-REWARD_MAG, reward=REWARD_MAG)  # TODO: magic numbers!
+    C = create_C(num_obs, rwd_idx, pun=-REWARD_MAG, reward=REWARD_MAG)
 
     agent = Agent(
         A=A,
         B=B,
         pB=pB,
         C=C,
-        policy_len=3,
+        policy_len=POLICY_LEN,
         policies=None,
         B_factor_list=None,
         use_utility=True,

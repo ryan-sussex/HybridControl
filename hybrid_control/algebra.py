@@ -4,13 +4,14 @@ import numpy as np
 from scipy.linalg import null_space
 from scipy.optimize import linprog
 
+from hybrid_control.config import param_config
 
 logger = logging.getLogger("linear_algebra")
 
 
-UPPER_BOUND = 5
-LOWER_BOUND = -5
-# TODO: can add specific constraints based on problems control bounds
+UPPER_BOUND = param_config.getint("UPPER_BOUND", 5)
+LOWER_BOUND = param_config.getint("LOWER_BOUND", 5)
+
 
 def extract_adjacency(W_x: np.ndarray, W_u: np.ndarray, b: np.ndarray, u_max=1):    # TODO: get from env
     """
