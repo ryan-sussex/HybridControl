@@ -93,7 +93,19 @@ def main():
 
             except Exception as e:
                 pass
-
+            
+    # final plot suite
+    plot_suite(
+        controller,
+        np.stack(obs),
+        np.stack(actions),
+        discrete_actions=discrete_actions,
+        rewards=rewards,
+        start=i + 1 - REFIT_EVERY,
+        level=2,
+    )
+    plt.show()
+    
     create_video(frames, 60, "./video/out")
     env.close()
     
