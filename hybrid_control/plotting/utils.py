@@ -350,6 +350,23 @@ def plot_coverage(obs):
     plt.scatter(obs_all[:,0], obs_all[:,1], s=0.1)
     plt.title('state space coverage')
     plt.show()
+    
+def plot_av_rewards(average_rewards, std_rewards):
+    steps = np.arange(len(average_rewards))
+    plt.plot(steps, average_rewards, label='Average Reward')
+    plt.fill_between(steps, average_rewards - std_rewards, average_rewards + std_rewards, color='b', alpha=0.2)
+    plt.xlabel('Steps')
+    plt.ylabel('Reward')
+    plt.title('Average reward per step')
+    plt.legend()
+    plt.show()
+    
+    
+def plot_av_coverage(obs):
+    obs_all = np.squeeze(obs)
+    plt.scatter(obs_all[:,0], obs_all[:,1], s=0.1)
+    plt.title('Average cumulative state-space coverage')
+    plt.show()
 
 def plot_suite(
     controller: Controller,

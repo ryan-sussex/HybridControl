@@ -31,12 +31,9 @@ REWARD_LOC = np.array([.5, 5.])
 
 def main():
 
-    # ENV_STEPS = 10000
-    # REFIT_EVERY = 1000
-    
-    ENV_STEPS = 100
-    REFIT_EVERY = 100
-    
+    ENV_STEPS = 10000
+    REFIT_EVERY = 1000
+
     env = gym.make('MountainCarContinuous-v0', render_mode="rgb_array")
     env.reset()
     max_u = env.action_space.high
@@ -76,24 +73,23 @@ def main():
 
         action = controller.policy(observation, action)
         
-        if i % REFIT_EVERY == REFIT_EVERY - 1 and reward_reached < 2: # <3
+        if i % REFIT_EVERY == REFIT_EVERY - 1 and reward_reached < 2:#3: # <3
             reward_reached = 0
             create_video(frames, 60, "./video/out")
             try:
-                # plot_suite(
-                #     controller,
-                #     np.stack(obs),
-                #     np.stack(actions),
-                #     discrete_actions=discrete_actions,
-                #     rewards=rewards,
-                #     start=i + 1 - REFIT_EVERY,
-                #     level=2,
-                # )
-                # plt.show()
+                plot_suite(
+                    controller,
+                    np.stack(obs),
+                    np.stack(actions),
+                    discrete_actions=discrete_actions,
+                    rewards=rewards,
+                    start=i + 1 - REFIT_EVERY,
+                    level=2,
+                )
+                plt.show()
                 controller = controller.estimate_and_identify(
                     np.stack(obs), np.stack(actions)
                 )
-                
 
             except Exception as e:
                 pass
@@ -101,8 +97,8 @@ def main():
     create_video(frames, 60, "./video/out")
     env.close()
     
-    plot_total_reward(rewards)
-    plot_coverage(obs)
+    # plot_total_reward(rewards)
+    # plot_coverage(obs)
     
     
     return np.squeeze(obs), np.array(rewards)
