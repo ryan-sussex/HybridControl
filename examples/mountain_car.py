@@ -16,23 +16,22 @@ from hybrid_control.plotting.utils import *
 
 from utils import create_video
 
-
-
-'''
-note: Turned om state IG
-'''
-
-
 logging.basicConfig(level=logging.INFO)
 
 
-REWARD_LOC = np.array([.5, 5.])
+REWARD_LOC = np.array([0, 0])
 
 
 def main():
+# if __name__ == "__main__":
 
-    ENV_STEPS = 10000
-    REFIT_EVERY = 1000
+
+    # ENV_STEPS = 10000
+    # REFIT_EVERY = 1000
+    
+    ENV_STEPS = 1000
+    REFIT_EVERY = 200
+
 
     env = gym.make('MountainCarContinuous-v0', render_mode="rgb_array")
     env.reset()
@@ -45,7 +44,7 @@ def main():
     N_STEPS = 100
 
     controller = get_initial_controller(OBS_DIM, ACT_DIM, K, max_u=max_u, min_u=min_u)
-    # controller.set_known_reward(100, pos=REWARD_LOC)
+    # controller.set_known_reward(500, pos=REWARD_LOC)
     action = controller.policy()
     rewards = []
     reward_reached = 0
@@ -54,16 +53,29 @@ def main():
     actions = []
     discrete_actions = []
     frames = []
+    
+    
+    episode_rewards = []
+    
+    
     for i in range(ENV_STEPS):
         observation, reward, terminated, truncated, info = env.step(action)
         frames.append(env.render())
+        
+        # need to accumulate a reward over each episode until terminated
+        
         accum_reward+=reward
-        rewards.append(accum_reward)
+        # episode_rewards.append(accum_reward)
+        
+        # rewards.append(reward)
         
         # if reward reached more than twice in one session then don't refit
         if terminated or truncated:
+            episode_rewards.append(accum_reward)
+            accum_reward = 0 # reset episode accumulation
             if terminated > 0:
                 reward_reached +=1
+                # rewards.append(reward)
                 action = controller.policy(observation, action, reward) # Here to make sure reward loc is updated
             observation, info = env.reset()
 
@@ -72,6 +84,10 @@ def main():
         discrete_actions.append(controller.discrete_action)
 
         action = controller.policy(observation, action)
+        
+        # if reward_reached > 4:
+        #     controller.set_known_reward(500, pos=REWARD_LOC)
+
         
         if i % REFIT_EVERY == REFIT_EVERY - 1 and reward_reached < 2:#3: # <3
             reward_reached = 0
@@ -109,11 +125,11 @@ def main():
     create_video(frames, 60, "./video/out")
     env.close()
     
-    # plot_total_reward(rewards)
-    # plot_coverage(obs)
+    plot_total_reward(episode_rewards)
+    plot_coverage(obs)
     
     
-    return np.squeeze(obs), np.array(rewards)
+    return np.squeeze(obs), episode_rewards
     
 if __name__ == "__main__":
     obs, rewards = main()

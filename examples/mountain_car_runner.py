@@ -12,7 +12,23 @@ def average_data(file_paths):
     return av_data, std_data
 
 
-num_runs = 3
+def average_rewards(file_paths):
+    data = [np.load(file) for file in file_paths]
+    min_length = min(len(arr) for arr in data)
+    trimmed_rewards = [arr[:min_length] for arr in data]
+    
+    avg_rewards = np.mean(trimmed_rewards, axis=0)
+    
+    return avg_rewards
+    
+    
+    
+    
+    # avg_rewards = np.mean(trimmed_rewards, axis=0)
+    
+    # avg_rewards
+
+num_runs = 2
 
 save_dir = "MC_data"
 os.makedirs(save_dir, exist_ok=True)
