@@ -345,10 +345,49 @@ def plot_total_reward(rewards):
     plt.title('Reward over time')
     plt.show()
     
+# def plot_coverage(obs):
+#     obs_all = np.squeeze(obs)
+#     plt.scatter(obs_all[:,0], obs_all[:,1], s=0.1)
+#     # plt.title('state space coverage')
+#     plt.xlabel('Position', fontsize=22)
+#     plt.ylabel('Velocity', fontsize=22)
+#     plt.spines['top'].set_visible(False)
+#     plt.spines['right'].set_visible(False)
+#     plt.tick_params(axis='both', which='major', labelsize=20)
+#     plt.tick_params(axis='both', which='minor', labelsize=20)    
+#     plt.show()
+
 def plot_coverage(obs):
     obs_all = np.squeeze(obs)
-    plt.scatter(obs_all[:,0], obs_all[:,1], s=0.1)
-    plt.title('state space coverage')
+    plt.scatter(obs_all[:, 0], obs_all[:, 1], s=0.1)
+    
+    plt.xlabel('Position', fontsize=22)
+    plt.ylabel('Velocity', fontsize=22)
+    plt.xlim(-1.2, 0.6)
+    plt.ylim(-0.07, 0.07)
+    
+    ax = plt.gca()
+    
+    # Set a fainter grey background color
+    ax.set_facecolor('#f0f0f0')  # Lighter shade of grey
+    
+    # Customize gridlines
+    ax.grid(True, which='both', color='white', linewidth=2)
+    
+    # Adjust the grid z-order to be behind the scatter plot
+    ax.set_axisbelow(True)
+    
+    # Remove the top and right spines (the black box)
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    
+    # Set thinner spines for bottom and left
+    ax.spines['bottom'].set_linewidth(0.5)
+    ax.spines['left'].set_linewidth(0.5)
+    
+    # Set tick parameters
+    ax.tick_params(axis='both', labelsize=18)
+    
     plt.show()
     
 def plot_av_rewards(average_rewards, std_rewards):

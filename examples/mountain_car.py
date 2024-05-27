@@ -26,14 +26,17 @@ def main():
 # if __name__ == "__main__":
 
 
-    # ENV_STEPS = 10000
-    # REFIT_EVERY = 1000
+    ENV_STEPS = 100000
+    REFIT_EVERY = 1000
     
-    ENV_STEPS = 1000
-    REFIT_EVERY = 200
+    # ENV_STEPS = 1000
+    # REFIT_EVERY = 200
 
 
     env = gym.make('MountainCarContinuous-v0', render_mode="rgb_array")
+    # env.max_episode_steps = 999
+    env.max_episode_steps = 200
+
     env.reset()
     max_u = env.action_space.high
     min_u = env.action_space.low  
@@ -48,17 +51,22 @@ def main():
     action = controller.policy()
     rewards = []
     reward_reached = 0
-    accum_reward = 0
+    
     obs = []
     actions = []
     discrete_actions = []
     frames = []
     
     
-    episode_rewards = []
+    reward_per_episode = []
+    
+    accum_reward = 0
+    episode_num = 0 
     
     
     for i in range(ENV_STEPS):
+        if episode_num > 20:
+            break
         observation, reward, terminated, truncated, info = env.step(action)
         frames.append(env.render())
         
@@ -71,8 +79,14 @@ def main():
         
         # if reward reached more than twice in one session then don't refit
         if terminated or truncated:
-            episode_rewards.append(accum_reward)
+            print('---------------', episode_num,i, '---------------')
+            
+            episode_num +=1
+            
+            reward_per_episode.append(accum_reward)
+            
             accum_reward = 0 # reset episode accumulation
+            
             if terminated > 0:
                 reward_reached +=1
                 # rewards.append(reward)
@@ -89,20 +103,20 @@ def main():
         #     controller.set_known_reward(500, pos=REWARD_LOC)
 
         
-        if i % REFIT_EVERY == REFIT_EVERY - 1 and reward_reached < 2:#3: # <3
+        if i % REFIT_EVERY == REFIT_EVERY - 1 and reward_reached < 3:#3: # <3
             reward_reached = 0
             create_video(frames, 60, "./video/out")
             try:
-                plot_suite(
-                    controller,
-                    np.stack(obs),
-                    np.stack(actions),
-                    discrete_actions=discrete_actions,
-                    rewards=rewards,
-                    start=i + 1 - REFIT_EVERY,
-                    level=2,
-                )
-                plt.show()
+                # plot_suite(
+                #     controller,
+                #     np.stack(obs),
+                #     np.stack(actions),
+                #     discrete_actions=discrete_actions,
+                #     rewards=rewards,
+                #     start=i + 1 - REFIT_EVERY,
+                #     level=2,
+                # )
+                # plt.show()
                 controller = controller.estimate_and_identify(
                     np.stack(obs), np.stack(actions)
                 )
@@ -125,12 +139,12 @@ def main():
     create_video(frames, 60, "./video/out")
     env.close()
     
-    plot_total_reward(episode_rewards)
-    plot_coverage(obs)
+    # plot_total_reward(episode_rewards)
+    # plot_coverage(obs)
     
     
-    return np.squeeze(obs), episode_rewards
+    return np.squeeze(obs), np.array(reward_per_episode)
     
 if __name__ == "__main__":
-    obs, rewards = main()
+    obs, reward_per_episode = main()
  
