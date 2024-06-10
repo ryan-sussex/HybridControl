@@ -57,9 +57,7 @@ def main():
     discrete_actions = []
     frames = []
     
-    
     reward_per_episode = []
-    
     accum_reward = 0
     episode_num = 0 
     
@@ -71,13 +69,8 @@ def main():
         frames.append(env.render())
         
         # need to accumulate a reward over each episode until terminated
-        
         accum_reward+=reward
-        # episode_rewards.append(accum_reward)
-        
-        # rewards.append(reward)
-        
-        # if reward reached more than twice in one session then don't refit
+                
         if terminated or truncated:
             print('---------------', episode_num,i, '---------------')
             
@@ -89,7 +82,6 @@ def main():
             
             if terminated > 0:
                 reward_reached +=1
-                # rewards.append(reward)
                 action = controller.policy(observation, action, reward) # Here to make sure reward loc is updated
             observation, info = env.reset()
 
@@ -99,24 +91,21 @@ def main():
 
         action = controller.policy(observation, action)
         
-        # if reward_reached > 4:
-        #     controller.set_known_reward(500, pos=REWARD_LOC)
-
-        
-        if i % REFIT_EVERY == REFIT_EVERY - 1 and reward_reached < 3:#3: # <3
+        # if reward reached more than twice in one session then don't refit
+        if i % REFIT_EVERY == REFIT_EVERY - 1 and reward_reached < 2:#3: # <3
             reward_reached = 0
             create_video(frames, 60, "./video/out")
             try:
-                # plot_suite(
-                #     controller,
-                #     np.stack(obs),
-                #     np.stack(actions),
-                #     discrete_actions=discrete_actions,
-                #     rewards=rewards,
-                #     start=i + 1 - REFIT_EVERY,
-                #     level=2,
-                # )
-                # plt.show()
+                plot_suite(
+                    controller,
+                    np.stack(obs),
+                    np.stack(actions),
+                    discrete_actions=discrete_actions,
+                    rewards=rewards,
+                    start=i + 1 - REFIT_EVERY,
+                    level=2,
+                )
+                plt.show()
                 controller = controller.estimate_and_identify(
                     np.stack(obs), np.stack(actions)
                 )
@@ -139,7 +128,7 @@ def main():
     create_video(frames, 60, "./video/out")
     env.close()
     
-    # plot_total_reward(episode_rewards)
+    # plot_total_reward(reward_per_episode)
     # plot_coverage(obs)
     
     

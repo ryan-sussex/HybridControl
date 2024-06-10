@@ -52,15 +52,10 @@ def plot_coverage_average(obs):
     # Set tick parameters
     ax.tick_params(axis='both', labelsize=18)
     
-    
     plt.show()
     
-    
-    # avg_rewards = np.mean(trimmed_rewards, axis=0)
-    
-    # avg_rewards
 
-num_runs = 6
+num_runs = 15
 
 save_dir = "MC_data/HHA"
 os.makedirs(save_dir, exist_ok=True)
