@@ -46,10 +46,11 @@ if __name__ == "__main__":
     POLAR = False
     REWARD_LOC = np.array([0, 0.]) if POLAR else np.array([0, 1, 0])
     
-    ENV_STEPS = 500
+    ENV_STEPS = 10000
     REFIT_EVERY = 1000
 
     env = gym.make("Pendulum-v1", g=9.81, render_mode="rgb_array")
+    env.max_episode_steps = 10000
     env.reset()
     max_u = env.action_space.high
     min_u = env.action_space.low

@@ -25,13 +25,8 @@ REWARD_LOC = np.array([0, 0])
 def main():
 # if __name__ == "__main__":
 
-
     ENV_STEPS = 100000
     REFIT_EVERY = 1000
-    
-    # ENV_STEPS = 1000
-    # REFIT_EVERY = 200
-
 
     env = gym.make('MountainCarContinuous-v0', render_mode="rgb_array")
     # env.max_episode_steps = 999

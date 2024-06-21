@@ -7,6 +7,9 @@ import networkx as nx
 from hybrid_control.controller import Controller
 from hybrid_control.observer_transition_model import clean_q_pi
 
+# plt.rcParams.update({'font.size': 18})
+
+
 color_names = ["windows blue", "red", "amber", "faded green", "purple", "grey"]
 colors = sns.xkcd_palette(color_names)
 sns.set_style("white")
@@ -22,8 +25,10 @@ def plot_most_likely_dynamics(
     xlim=X_LIM,
     ylim=X_LIM,
     alpha=ALPHA,
-    nxpts=30,
-    nypts=30,
+    # nxpts=30,
+    # nypts=30,
+    nxpts=20,
+    nypts=20,
     ax=None,
     at_state=None,
     at_action=None,
@@ -69,17 +74,21 @@ def plot_most_likely_dynamics(
             dxydt_m[zk, 1],
             color=colors[k % len(colors)],
             alpha=alpha,
+            width=0.005
         )
-    ax.legend([str(i) for i in range(K)])
+    # ax.legend([str(i) for i in range(K)],loc='upper left', bbox_to_anchor=(0, 1))
     ax.set_xlim(xlim)
     ax.set_ylim(ylim)
-    ax.set_title("Most likely dynamics,  dims(0,1)")
-
+    # ax.set_title("Most likely dynamics,  dims(0,1)")
+    ax.set_xlabel('Position', fontsize=24)
+    ax.set_ylabel('Velocity', fontsize=24)
+    ax.tick_params(axis='both', which='major', labelsize=20)
+    ax.tick_params(axis='both', which='minor', labelsize=20)
 
     if controller.reward_pos_cts is not None:
         plot_reward(controller, xlim=xlim, ylim=ylim, ax=ax)
 
-    plot_mode_priors(controller, xlim=xlim, ylim=ylim, ax=ax)
+    # plot_mode_priors(controller, xlim=xlim, ylim=ylim, ax=ax)
     return ax
 
 
@@ -125,7 +134,11 @@ def plot_actions(
     # ax.legend([f"Go to {i}" for i in range(controller.n_modes)])
     ax.set_xlim(xlim)
     ax.set_ylim(ylim)
-    ax.set_title("Action applied dims(0,1)")
+    ax.set_xlabel('Position', fontsize=24)
+    ax.set_ylabel('Velocity', fontsize=24)
+    ax.tick_params(axis='both', which='major', labelsize=20)
+    ax.tick_params(axis='both', which='minor', labelsize=20)
+    # ax.set_title("Action applied dims(0,1)")
     return ax
 
 
@@ -148,8 +161,8 @@ def plot_trajectory(
         fig = plt.figure(figsize=FIGSIZE)
         ax = fig.add_subplot(111)
 
-    ax.plot(x[0, 0], x[0, 1], "go")
-    ax.plot(x[-1, 0], x[-1, 1], "r+")
+    # ax.plot(x[0, 0], x[0, 1], "go")
+    # ax.plot(x[-1, 0], x[-1, 1], "r+")
 
     for start, stop in zip(zcps[:-1], zcps[1:]):
         ax.plot(
@@ -162,7 +175,11 @@ def plot_trajectory(
         )
         ax.set_xlim(xlim)
         ax.set_ylim(ylim)
-        ax.set_title("Trajectory dims(0,1)")
+        ax.set_xlabel('Position', fontsize=24)
+        ax.set_ylabel('Velocity', fontsize=24)
+        ax.tick_params(axis='both', which='major', labelsize=20)
+        ax.tick_params(axis='both', which='minor', labelsize=20)
+        # ax.set_title("Trajectory dims(0,1)")
     return ax
 
 
@@ -232,7 +249,7 @@ def plot_reward(
     ax.scatter(controller.reward_pos_cts[0], controller.reward_pos_cts[1], s=200, marker="v", label="Reward", color="black")
     ax.set_xlim(xlim)
     ax.set_ylim(ylim)
-    ax.set_title("Trajectory dims(0,1)",)
+    # ax.set_title("Trajectory dims(0,1)",)
     return ax
 
 def plot_mode_priors(
@@ -248,7 +265,7 @@ def plot_mode_priors(
         ax.scatter(mode[0], mode[1], s=100, marker=">", label=f"goal {i}", )
         ax.set_xlim(xlim)
         ax.set_ylim(ylim)
-        ax.set_title("Trajectory dims(0,1)",)
+        # ax.set_title("Trajectory dims(0,1)",)
     return ax
 def plot_multiple_overlapped(
     controller: Controller,
@@ -345,49 +362,10 @@ def plot_total_reward(rewards):
     plt.title('Reward over time')
     plt.show()
     
-# def plot_coverage(obs):
-#     obs_all = np.squeeze(obs)
-#     plt.scatter(obs_all[:,0], obs_all[:,1], s=0.1)
-#     # plt.title('state space coverage')
-#     plt.xlabel('Position', fontsize=22)
-#     plt.ylabel('Velocity', fontsize=22)
-#     plt.spines['top'].set_visible(False)
-#     plt.spines['right'].set_visible(False)
-#     plt.tick_params(axis='both', which='major', labelsize=20)
-#     plt.tick_params(axis='both', which='minor', labelsize=20)    
-#     plt.show()
-
 def plot_coverage(obs):
     obs_all = np.squeeze(obs)
-    plt.scatter(obs_all[:, 0], obs_all[:, 1], s=0.1)
-    
-    plt.xlabel('Position', fontsize=22)
-    plt.ylabel('Velocity', fontsize=22)
-    plt.xlim(-1.2, 0.6)
-    plt.ylim(-0.07, 0.07)
-    
-    ax = plt.gca()
-    
-    # Set a fainter grey background color
-    ax.set_facecolor('#f0f0f0')  # Lighter shade of grey
-    
-    # Customize gridlines
-    ax.grid(True, which='both', color='white', linewidth=2)
-    
-    # Adjust the grid z-order to be behind the scatter plot
-    ax.set_axisbelow(True)
-    
-    # Remove the top and right spines (the black box)
-    ax.spines['top'].set_visible(False)
-    ax.spines['right'].set_visible(False)
-    
-    # Set thinner spines for bottom and left
-    ax.spines['bottom'].set_linewidth(0.5)
-    ax.spines['left'].set_linewidth(0.5)
-    
-    # Set tick parameters
-    ax.tick_params(axis='both', labelsize=18)
-    
+    plt.scatter(obs_all[:,0], obs_all[:,1], s=0.1)
+    plt.title('state space coverage')
     plt.show()
     
 def plot_av_rewards(average_rewards, std_rewards):
@@ -454,6 +432,7 @@ def plot_suite(
     # EFE
     plot_efe(controller)
     
+    plot_most_likely_dynamics(controller, xlim=xlim, ylim=ylim)
     return
 
 
@@ -492,9 +471,105 @@ def data_to_array(data: List, actions: List):
     # data = np.hstack((data, actions[:data.shape[0]]))
     return data, actions
 
+# def plot_rewards(models_data):
+#     colors = ['b', 'g']  # Colors for the models
+#     labels = ['AC', 'SAC_2Q']  # Labels for the legend
+
+#     for i, (av, std) in enumerate(models_data):
+#         plt.plot(np.arange(av.shape[0]), av, label=labels[i], color=colors[i])
+#         plt.fill_between(np.arange(av.shape[0]), av - std, av + std, color=colors[i], alpha=0.2)
+    
+#     plt.xlabel('Episodes')
+#     plt.ylabel('Reward')
+#     plt.title('Average reward')
+#     plt.legend()
+#     plt.xlim(0, 50)
+#     plt.ylim(-10, 100)
+#     plt.show()
+    
+def plot_rewards_overall(models_data):
+    colors = ['#1f77b4', '#ff7f0e', '#2ca02c']   # Colors for the models
+    labels = ['AC', 'SAC', 'HHA']  # Labels for the legend
+    linestyles = ['-', '-', '-']  # Line styles for differentiation
+    lines = [] 
+    plt.figure(figsize=(4, 3))  # Set figure size
+    for i, (av, std) in enumerate(models_data):
+        line, = plt.plot(np.arange(av.shape[0]), av, label=labels[i], color=colors[i], linestyle=linestyles[i], linewidth=2)
+        plt.fill_between(np.arange(av.shape[0]), av - std, av + std, color=colors[i], alpha=0.2)
+        lines.append(line)
+    plt.xlabel('Episodes', fontsize=14)
+    plt.ylabel('Reward', fontsize=14)
+    # plt.legend(fontsize=12)
+    plt.legend(handles=[lines[2], lines[1], lines[0]], fontsize=12)
+    
+    ax = plt.gca()
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
+   
+    #plt.grid(True, linestyle='--', alpha=0.6)
+    plt.xlim(0, 20)
+    plt.ylim(-10, 100)
+    plt.xticks([0, 5, 10, 15, 20], fontsize=12)
+    plt.yticks([0, 50,100], labels=['0','50', '100'], fontsize=12)
+    plt.tight_layout()
+    plt.savefig('average_reward_plot.png', dpi=300)  # Save the figure
+    plt.show()
+
+def average_data(file_paths):
+    data = np.stack([np.load(file)[:21] for file in file_paths])
+    av_data = np.mean(data, axis=0)
+    std_data = np.std(data, axis=0)
+    return av_data, std_data
 
 
+# def average_data(file_paths):
+#     data = [np.load(file) for file in file_paths]
+#     av_data = np.mean(data, axis=0)
+#     std_data = np.std(data, axis=0)
+#     return av_data, std_data
 
+
+# def average_rewards(file_paths):
+#     data = [np.load(file) for file in file_paths]
+#     min_length = min(len(arr) for arr in data)
+#     trimmed_rewards = [arr[:min_length] for arr in data]
+    
+#     avg_rewards = np.mean(trimmed_rewards, axis=0)
+    
+#     return avg_rewards
+    
+    
+def plot_coverage_average(obs):
+    obs_all = np.squeeze(obs)
+    plt.scatter(obs_all[:, 0], obs_all[:, 1], s=0.1)
+    
+    plt.xlabel('Position', fontsize=22)
+    plt.ylabel('Velocity', fontsize=22)
+    plt.xlim(-1.3, 0.6)
+    plt.ylim(-0.07, 0.07)
+    ax = plt.gca()
+    
+    # Set a fainter grey background color
+    ax.set_facecolor('#f0f0f0')  # Lighter shade of grey
+    
+    # Customize gridlines
+    ax.grid(True, which='both', color='white', linewidth=2)
+    
+    # Adjust the grid z-order to be behind the scatter plot
+    ax.set_axisbelow(True)
+    
+    # Remove the top and right spines (the black box)
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    
+    # Set thinner spines for bottom and left
+    ax.spines['bottom'].set_linewidth(0.5)
+    ax.spines['left'].set_linewidth(0.5)
+    
+    # Set tick parameters
+    ax.tick_params(axis='both', labelsize=18)
+    
+    plt.show()
 
 
 if __name__ == "__main__":
