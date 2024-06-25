@@ -8,21 +8,24 @@ Code for planning in hybrid models on classic control suite.
 
 ## Recurrent switching linear dynamical systems 
 We exploit recurrent switching linear dynamical systems allowing us to seperate control into high level planning through discrete variables and low level *reflexive* LQR control. 
-
-<img src="./figs/piecewise.png" width="400"/>
+<p align="center">
+    <img src="./figs/piecewise.png" width="400"/>
+</p>
 
 ## Exploration
 
 Due to the small dimension of the discrete variables, which only capture non-linear behaviour, we can calculate information theoretic bonuses for exploration.
-
-<img src="./figs/exploration.png" width="400"/>
+<p align="center">
+    <img src="./figs/exploration.png" width="400"/>
+</p>
 
 
 ## Performance
 
-The directed exploration allows the algorithm to solve sparse mountain car efficiently.
-
-<img src="./figs/average_reward_plot.png" width="400"/>
+The directed exploration allows the algorithm to solve sparse  continuous mountain car efficiently.
+<p align="center">
+    <img src="./figs/average_reward_plot.png" width="400"/>
+</p>
 
 <!-- ![](/figs/piecewise.png)
 ![](/figs/exploration.png)
