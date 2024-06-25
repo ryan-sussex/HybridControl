@@ -9,14 +9,14 @@ Code for planning in hybrid models on classic control suite.
 ## Recurrent switching linear dynamical systems 
 We exploit recurrent switching linear dynamical systems allowing us to seperate control into high level planning through discrete variables and low level *reflexive* LQR control. 
 <p align="center">
-    <img src="./figs/piecewise.png" width="400"/>
+    <img src="./figs/piecewise.png" width="600"/>
 </p>
 
 ## Exploration
 
 Due to the small dimension of the discrete variables, which only capture non-linear behaviour, we can calculate information theoretic bonuses for exploration.
 <p align="center">
-    <img src="./figs/exploration.png" width="400"/>
+    <img src="./figs/exploration.png" width="600"/>
 </p>
 
 
